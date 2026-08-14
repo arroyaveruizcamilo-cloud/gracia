@@ -134,6 +134,18 @@ async function uploadImage() {
   } catch (err) { showToast(err.message); }
 }
 
+async function uploadMainImage() {
+  const fileInput = $('#main-image-upload-input');
+  if (!fileInput.files?.length) return;
+  try {
+    const res = await api.uploadImage(fileInput.files[0], state.token);
+    $('#product-form-image').value = res.url;
+    $('#product-image-preview').innerHTML = `<img src="${res.url}" style="max-width:120px;max-height:120px;object-fit:cover;border:1px solid var(--gray-mid)">`;
+    fileInput.value = '';
+    showToast('Imagen principal subida');
+  } catch (err) { showToast(err.message); }
+}
+
 function openProductForm(data = null) {
   const f = $('#product-form-element');
   f.reset();
@@ -589,6 +601,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#faq-cancel-btn').addEventListener('click', closeFAQForm);
   $('#faq-modal').addEventListener('click', e => { if (e.target === $('#faq-modal')) closeFAQForm(); });
   $('#image-upload-btn').addEventListener('click', uploadImage);
+  $('#main-image-upload-btn').addEventListener('click', () => $('#main-image-upload-input').click());
+  $('#main-image-upload-input').addEventListener('change', uploadMainImage);
   $('#add-variant-btn').addEventListener('click', () => addVariantRow());
   $('#add-image-btn').addEventListener('click', () => addImageInput());
 
