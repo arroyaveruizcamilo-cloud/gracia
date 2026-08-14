@@ -221,9 +221,9 @@
         <div class="form-group"><label>Stock</label><input type="number" id="product-form-stock" required></div>
         <div class="form-group"><label>Imagen Principal</label>
           <div style="display:flex;gap:8px">
-            <input type="text" id="product-form-image" placeholder="URL o subí desde tu PC" style="flex:1">
-            <button type="button" class="btn btn-sm btn-gold" id="main-image-upload-btn" style="white-space:nowrap"><i class="fas fa-upload"></i> PC</button>
-            <input type="file" id="main-image-upload-input" accept="image/*" style="display:none">
+            <input type="text" id="product-form-image" placeholder="URL o subí una imagen" style="flex:1">
+            <label for="main-image-upload-input" class="btn btn-sm btn-gold" style="white-space:nowrap;cursor:pointer;margin:0"><i class="fas fa-upload"></i> Subir</label>
+            <input type="file" id="main-image-upload-input" accept="image/*" class="visually-hidden">
           </div>
         </div>
         <div class="form-group full-width" style="display:flex;gap:12px">
@@ -241,11 +241,10 @@
 
         <!-- Images -->
         <div class="form-group full-width">
-          <label>Galería de Imágenes
-            <button type="button" class="btn btn-sm btn-gold" id="add-image-btn" style="margin-left:8px">+ Añadir URL</button>
-            <button type="button" class="btn btn-sm btn-outline" id="image-upload-btn" style="margin-left:4px"><i class="fas fa-upload"></i> Subir</button>
-            <input type="file" id="image-upload-input" accept="image/*" style="display:none">
-          </label>
+          <div style="margin-bottom:6px"><strong>Galería de Imágenes</strong></div>
+          <button type="button" class="btn btn-sm btn-gold" id="add-image-btn" style="margin-right:4px">+ Añadir URL</button>
+          <label for="image-upload-input" class="btn btn-sm btn-outline" style="margin-left:4px;cursor:pointer"><i class="fas fa-upload"></i> Subir fotos</label>
+          <input type="file" id="image-upload-input" accept="image/*" multiple class="visually-hidden">
           <div id="images-container"></div>
         </div>
 

@@ -125,13 +125,16 @@ function addImageInput(url = '') {
 
 async function uploadImage() {
   const fileInput = $('#image-upload-input');
-  if (!fileInput.files?.length) return;
-  try {
-    const res = await api.uploadImage(fileInput.files[0], state.token);
-    addImageInput(res.url);
-    fileInput.value = '';
-    showToast('Imagen subida');
-  } catch (err) { showToast(err.message); }
+  const files = fileInput.files;
+  if (!files?.length) return;
+  for (const file of files) {
+    try {
+      const res = await api.uploadImage(file, state.token);
+      addImageInput(res.url);
+      showToast('Imagen subida');
+    } catch (err) { showToast(err.message); }
+  }
+  fileInput.value = '';
 }
 
 async function uploadMainImage() {
@@ -600,8 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#faq-form-element').addEventListener('submit', saveFAQ);
   $('#faq-cancel-btn').addEventListener('click', closeFAQForm);
   $('#faq-modal').addEventListener('click', e => { if (e.target === $('#faq-modal')) closeFAQForm(); });
-  $('#image-upload-btn').addEventListener('click', uploadImage);
-  $('#main-image-upload-btn').addEventListener('click', () => $('#main-image-upload-input').click());
+  $('#image-upload-input').addEventListener('change', uploadImage);
   $('#main-image-upload-input').addEventListener('change', uploadMainImage);
   $('#add-variant-btn').addEventListener('click', () => addVariantRow());
   $('#add-image-btn').addEventListener('click', () => addImageInput());

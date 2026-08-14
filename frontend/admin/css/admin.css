@@ -51,6 +51,7 @@ body{font-family:var(--body);background:var(--gray-light);color:var(--black);ove
 .btn-success:hover{background:#27ae60}
 .btn-sm{padding:6px 14px;font-size:.6rem;letter-spacing:1.5px}
 .btn-xs{padding:4px 10px;font-size:.55rem}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
 /* ===== ADMIN LAYOUT ===== */
 .admin-container{display:none;min-height:100vh}
