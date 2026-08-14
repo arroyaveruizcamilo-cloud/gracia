@@ -13,7 +13,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, PlainTextResponse
 from database import engine, Base, SessionLocal
-from models import User, Product, ProductVariant, FAQ, Coupon
+from models import User, UserRole, Product, ProductVariant, FAQ, Coupon
 from auth import hash_password
 from middleware.error_handler import global_error_handler
 import socketio
@@ -131,7 +131,7 @@ async def lifespan(app: FastAPI):
 
     admin_email = os.getenv("SEED_ADMIN_EMAIL", "admin@gracia.moda")
     admin_pass = os.getenv("SEED_ADMIN_PASSWORD", "Admin123!")
-    admin = db.query(User).filter(User.email == admin_email).first()
+    admin = db.query(User).filter(User.role == UserRole.admin.value).first()
     if not admin:
         admin = User(
             name="Admin Gracia",
@@ -140,7 +140,10 @@ async def lifespan(app: FastAPI):
             role="admin",
         )
         db.add(admin)
-        db.commit()
+    else:
+        admin.email = admin_email
+        admin.password_hash = hash_password(admin_pass)
+    db.commit()
 
     seed_products(db)
     seed_faqs(db)
