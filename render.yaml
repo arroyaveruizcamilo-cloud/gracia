@@ -1,0 +1,33 @@
+# ─── GRACIA — Render Blueprint ──────────────────────────────
+# Permite el deploy con un clic desde https://render.com
+
+databases:
+  - name: gracia-db
+    databaseName: gracia
+    user: gracia
+    plan: free
+
+services:
+  - type: web
+    name: gracia
+    runtime: docker
+    repo: https://github.com/arroyaveruizcamilo-cloud/gracia
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: gracia-db
+          property: connectionString
+      - key: CORS_ORIGINS
+        sync: false
+      - key: SEED_ADMIN_EMAIL
+        value: admin@gracia.moda
+      - key: SEED_ADMIN_PASSWORD
+        value: Admin123!
