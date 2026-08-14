@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gracia Clothing - Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="/frontend/admin/css/admin.css">
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div class="login-page" id="login-page">
+  <div class="login-box">
+    <h1>Gracia<span>Clothing</span></h1>
+    <p>Panel de Administración</p>
+    <form id="login-form">
+      <div class="error-msg" id="login-error"></div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="admin@gracia.moda" required>
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="login-password" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-gold">Iniciar Sesión</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== ADMIN APP ===== -->
+<div class="admin-container" id="admin-app">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span>Gracia</span>
+      <small>Admin</small>
+    </div>
+    <nav>
+      <a href="#" data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
+      <a href="#" data-page="products"><i class="fas fa-box"></i><span>Productos</span></a>
+      <a href="#" data-page="orders"><i class="fas fa-shopping-cart"></i><span>Pedidos</span></a>
+      <a href="#" data-page="chat" id="admin-chat-nav"><i class="fas fa-comments"></i><span>Chat <span id="admin-chat-badge" style="display:none;background:var(--danger);color:#fff;font-size:.55rem;padding:1px 6px;border-radius:8px;margin-left:4px">0</span></span></a>
+      <a href="#" data-page="messages"><i class="fas fa-envelope"></i><span>Mensajes</span></a>
+      <a href="#" data-page="marketing"><i class="fas fa-tag"></i><span>Cupones</span></a>
+      <a href="#" data-page="faqs"><i class="fas fa-question-circle"></i><span>FAQs</span></a>
+      <a href="#" data-page="analytics"><i class="fas fa-chart-bar"></i><span>Analíticas</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Cerrar Sesión</span></button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="main-header">
+      <div class="header-left">
+        <button class="sidebar-toggle" id="sidebar-toggle" aria-label="Abrir menú"><i class="fas fa-bars"></i></button>
+        <h1 id="page-title">Dashboard</h1>
+      </div>
+      <div class="user-badge">
+        <i class="fas fa-user"></i>
+        <span id="admin-user-name">Admin</span>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="page-section active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-shopping-cart"></i></div><div class="stat-value" id="stat-orders">0</div><div class="stat-label">Total Pedidos</div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-dollar-sign"></i></div><div class="stat-value" id="stat-revenue">$0</div><div class="stat-label">Ingresos Totales</div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-box"></i></div><div class="stat-value" id="stat-products">0</div><div class="stat-label">Productos Activos</div></div>
+        <div class="stat-card"><div class="stat-icon"><i class="fas fa-envelope"></i></div><div class="stat-value" id="stat-messages">0</div><div class="stat-label">Mensajes</div></div>
+      </div>
+      <div class="section-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2>Alertas</h2>
+          <span id="low-stock-warning"><i class="fas fa-check-circle" style="color:var(--success)"></i> Stock normal</span>
+        </div>
+      </div>
+      <div class="section-card">
+        <h2>Pedidos Recientes</h2>
+        <div class="table-wrap"><table id="recent-orders"><thead><tr><th>#</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead><tbody><tr><td colspan="5" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- PRODUCTS -->
+    <div class="page-section" id="page-products">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h2 style="font-family:var(--font-d)">Gestión de Productos</h2>
+        <button class="btn btn-gold" onclick="openProductForm()" style="width:auto"><i class="fas fa-plus"></i> Nuevo Producto</button>
+      </div>
+      <div class="section-card">
+        <div class="table-wrap"><table id="products-table"><thead><tr><th>ID</th><th>Img</th><th>Nombre</th><th>Precio</th><th>Cat</th><th>Stock</th><th>Var</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="8" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="page-section" id="page-orders">
+      <h2 style="font-family:var(--font-d);margin-bottom:20px">Gestión de Pedidos</h2>
+      <div class="section-card">
+        <div class="table-wrap"><table id="orders-table"><thead><tr><th>#</th><th>Cliente</th><th>Email</th><th>Total</th><th>Estado</th><th>Pago</th><th>Cambiar + Tracking</th></tr></thead><tbody><tr><td colspan="7" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="page-section" id="page-chat">
+      <h2 style="font-family:var(--font-d);margin-bottom:20px">Chat en Vivo</h2>
+      <div class="admin-chat-grid" style="display:grid;grid-template-columns:320px 1fr;gap:0;background:#fff;border:1px solid var(--gray-mid);min-height:500px">
+        <!-- Conversations list -->
+        <div class="admin-chat-conv-col" style="border-right:1px solid var(--gray-mid);display:flex;flex-direction:column">
+          <div style="padding:16px;border-bottom:1px solid var(--gray-mid);font-size:.7rem;text-transform:uppercase;letter-spacing:2px;color:var(--gray);font-weight:600">Conversaciones</div>
+          <div id="admin-chat-list" style="flex:1;overflow-y:auto">
+            <div style="padding:20px;text-align:center;color:var(--gray);font-size:.75rem">Cargando...</div>
+          </div>
+        </div>
+        <!-- Chat view -->
+        <div style="display:flex;flex-direction:column;background:var(--gray-light)" id="admin-chat-view">
+          <div id="admin-chat-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--gray);font-size:.8rem">
+            <div style="text-align:center">
+              <i class="fas fa-comments" style="font-size:3rem;opacity:.3;margin-bottom:12px;display:block"></i>
+              Selecciona una conversación
+            </div>
+          </div>
+          <div id="admin-chat-active" style="display:none;flex-direction:column;flex:1">
+            <div id="admin-chat-header" style="padding:12px 20px;background:#fff;border-bottom:1px solid var(--gray-mid);display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-weight:600;font-size:.85rem" id="admin-chat-user-name">—</div>
+                <div style="font-size:.7rem;color:var(--gray)" id="admin-chat-user-email">—</div>
+              </div>
+              <button class="btn btn-sm btn-outline" id="admin-chat-close-btn"><i class="fas fa-times"></i> Cerrar</button>
+            </div>
+            <div id="admin-chat-messages" style="flex:1;overflow-y:auto;padding:16px 20px"></div>
+            <div id="admin-chat-typing" style="display:none;padding:4px 20px;font-size:.7rem;color:var(--gray)">
+              <span class="admin-typing-dot"></span><span class="admin-typing-dot"></span><span class="admin-typing-dot"></span> Escribiendo...
+            </div>
+            <div style="display:flex;padding:12px 16px;border-top:1px solid var(--gray-mid);background:#fff;gap:8px">
+              <input type="text" id="admin-chat-input" placeholder="Escribe tu respuesta..." style="flex:1;padding:8px 14px;border:1px solid var(--gray-mid);font-family:var(--body);font-size:.8rem;outline:none">
+              <button class="btn btn-gold btn-sm" id="admin-chat-send" style="padding:8px 20px">Enviar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="page-section" id="page-messages">
+      <h2 style="font-family:var(--font-d);margin-bottom:20px">Mensajes de Contacto</h2>
+      <div class="section-card">
+        <div class="table-wrap"><table id="messages-table"><thead><tr><th>Nombre</th><th>Email</th><th>Mensaje</th><th>Fecha</th></tr></thead><tbody><tr><td colspan="4" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- MARKETING / CUPONES -->
+    <div class="page-section" id="page-marketing">
+      <h2 style="font-family:var(--font-d);margin-bottom:20px">Cupones de Descuento</h2>
+      <div class="section-card">
+        <h2>Crear Cupón</h2>
+        <form id="coupon-form" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end">
+          <div class="form-group"><label>Código</label><input type="text" id="coupon-code" placeholder="GRACIA20" required></div>
+          <div class="form-group"><label>Tipo</label><select id="coupon-type"><option value="percentage">%</option><option value="fixed">Fijo</option></select></div>
+          <div class="form-group"><label>Valor</label><input type="number" id="coupon-value" step="0.01" required></div>
+          <div class="form-group"><label>Compra Mín</label><input type="number" id="coupon-min" step="0.01" value="0"></div>
+          <div class="form-group"><label>Usos Máx</label><input type="number" id="coupon-uses" value="0"></div>
+          <div class="form-group"><label>Vence</label><input type="date" id="coupon-expires"></div>
+          <button type="submit" class="btn btn-gold" style="grid-column:1/-1">Crear Cupón</button>
+        </form>
+      </div>
+      <div class="section-card">
+        <h2>Cupones Existentes</h2>
+        <div class="table-wrap"><table id="coupons-table"><thead><tr><th>Código</th><th>Valor</th><th>Compra Mín</th><th>Usos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="6" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- FAQs -->
+    <div class="page-section" id="page-faqs">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h2 style="font-family:var(--font-d)">Preguntas Frecuentes</h2>
+        <button class="btn btn-gold" onclick="openFAQForm()" style="width:auto"><i class="fas fa-plus"></i> Nueva FAQ</button>
+      </div>
+      <div class="section-card">
+        <div class="table-wrap"><table id="faqs-table"><thead><tr><th>Pregunta</th><th>Respuesta</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="4" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="page-section" id="page-analytics">
+      <h2 style="font-family:var(--font-d);margin-bottom:20px">Analíticas de Ventas</h2>
+      <div class="section-card">
+        <h2>Ventas Mensuales</h2>
+        <div id="sales-chart"><p style="color:var(--text2);text-align:center">Cargando...</p></div>
+      </div>
+      <div class="section-card">
+        <h2>Productos Más Vendidos</h2>
+        <div class="table-wrap"><table id="top-products"><thead><tr><th>#</th><th>Producto</th><th>Cantidad</th><th>Ingresos</th></tr></thead><tbody><tr><td colspan="4" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- PRODUCT MODAL (with variants + images) -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal" style="max-width:700px">
+    <button class="close-modal" id="product-cancel-btn">&times;</button>
+    <h2 id="product-modal-title">Nuevo Producto</h2>
+    <form id="product-form-element">
+      <input type="hidden" id="product-form-id">
+      <div class="product-form">
+        <div class="form-group"><label>Nombre</label><input type="text" id="product-form-name" required></div>
+        <div class="form-group"><label>Categoría</label><select id="product-form-category">
+          <option value="Vestidos">Vestidos</option><option value="Blusas">Blusas</option><option value="Corsets">Corsets</option>
+          <option value="Pantalones">Pantalones</option><option value="Buzos">Buzos</option><option value="Faldas">Faldas</option><option value="Bodies">Bodies</option>
+        </select></div>
+        <div class="form-group"><label>Precio</label><input type="number" step="0.01" id="product-form-price" required></div>
+        <div class="form-group"><label>Precio Anterior</label><input type="number" step="0.01" id="product-form-old-price"></div>
+        <div class="form-group"><label>Stock</label><input type="number" id="product-form-stock" required></div>
+        <div class="form-group"><label>URL Imagen Principal</label><input type="text" id="product-form-image" placeholder="https://..."></div>
+        <div class="form-group full-width" style="display:flex;gap:12px">
+          <label><input type="checkbox" id="product-form-featured"> Destacado</label>
+        </div>
+        <div class="form-group full-width"><label>Descripción</label><textarea id="product-form-description" rows="3"></textarea></div>
+
+        <!-- Variants -->
+        <div class="form-group full-width">
+          <label>Variantes (Talla/Color)
+            <button type="button" class="btn btn-sm btn-gold" id="add-variant-btn" style="margin-left:8px">+ Añadir</button>
+          </label>
+          <div id="variants-container"></div>
+        </div>
+
+        <!-- Images -->
+        <div class="form-group full-width">
+          <label>Galería de Imágenes
+            <button type="button" class="btn btn-sm btn-gold" id="add-image-btn" style="margin-left:8px">+ Añadir URL</button>
+            <button type="button" class="btn btn-sm btn-outline" id="image-upload-btn" style="margin-left:4px"><i class="fas fa-upload"></i> Subir</button>
+            <input type="file" id="image-upload-input" accept="image/*" style="display:none">
+          </label>
+          <div id="images-container"></div>
+        </div>
+
+        <div class="form-group full-width" id="product-image-preview"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <button type="submit" class="btn btn-gold" style="flex:1">Guardar</button>
+        <button type="button" class="btn btn-danger" onclick="closeProductForm()" style="flex:1">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- FAQ MODAL -->
+<div class="modal-overlay" id="faq-modal">
+  <div class="modal" style="max-width:500px">
+    <button class="close-modal" id="faq-cancel-btn">&times;</button>
+    <h2 id="faq-modal-title">Nueva FAQ</h2>
+    <form id="faq-form-element">
+      <input type="hidden" id="faq-form-id">
+      <div class="form-group"><label>Pregunta</label><input type="text" id="faq-question" required></div>
+      <div class="form-group"><label>Respuesta</label><textarea id="faq-answer" rows="4" required></textarea></div>
+      <div class="form-group"><label>Categoría</label>
+        <select id="faq-category">
+          <option value="general">General</option><option value="envíos">Envíos</option>
+          <option value="devoluciones">Devoluciones</option><option value="pagos">Pagos</option><option value="productos">Productos</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Guardar</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/frontend/js/api.js"></script>
+<script src="/frontend/admin/js/admin.js"></script>
+
+</body>
+</html>

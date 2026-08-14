@@ -1,0 +1,17 @@
+{
+  "name": "GRACIA Clothing — Moda Femenina Colombiana",
+  "short_name": "GRACIA",
+  "description": "Descubrí nuestra colección de moda femenina colombiana. Estilo único con la esencia de Pereira.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#c9a84c",
+  "icons": [
+    { "src": "/frontend/assets/logo.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/frontend/assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/frontend/assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "lang": "es",
+  "dir": "ltr",
+  "categories": ["fashion", "shopping", "lifestyle"]
+}

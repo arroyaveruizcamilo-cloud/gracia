@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gracia Clothing — Moda Femenina Colombiana</title>
+<meta name="description" content="Descubre la nueva coleccion 2026 de Gracia Clothing. Moda femenina colombiana con estilo, elegancia y calidad. Envios a todo Colombia.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/frontend/css/styles.css">
+<link rel="manifest" href="/frontend/manifest.json">
+<meta name="theme-color" content="#111111">
+<meta property="og:title" content="Gracia Clothing — Moda Femenina Colombiana">
+<meta property="og:description" content="Descubre la nueva colección 2026 de Gracia Clothing.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://graciaclothing.com">
+<meta name="keywords" content="moda colombiana, ropa femenina, coleccion 2026, gracia clothing">
+<link rel="icon" type="image/svg+xml" href="/frontend/favicon.svg">
+<link rel="apple-touch-icon" href="/frontend/icons/icon-192.png">
+<script defer src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+<script defer>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
+<style>
+.topbar{background:var(--text);color:#fff;text-align:center;padding:.55rem 1rem;font-size:.56rem;letter-spacing:3px;text-transform:uppercase;font-weight:400}
+.topbar span{color:var(--gold);font-weight:500}
+.trust-bar{display:flex;justify-content:center;align-items:center;gap:3rem;padding:18px 40px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap}
+.trust-item{display:flex;align-items:center;gap:8px;font-size:.6rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);font-weight:500}
+.trust-item i{color:var(--gold);font-size:.85rem}
+.footer-trust{display:flex;justify-content:center;gap:2rem;padding:16px 0;border-top:1px solid var(--border-light);margin-top:24px;flex-wrap:wrap}
+.footer-trust span{font-size:.58rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);font-weight:500}
+.footer-trust i{margin-right:4px}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">Envio gratis en compras +$149.990 &nbsp;&middot;&nbsp; <span>Coleccion 2026</span> &nbsp;&middot;&nbsp; Cuotas sin interes</div>
+
+<!-- ===== HEADER ===== -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-logo" onclick="showPage('store')" style="cursor:pointer">
+      <img src="/uploads/images/f769185ca2924de39fd39f4eed50839b.jpg" alt="Gracia Clothing" class="site-logo">
+      <span class="logo-text">Gracia<span>Clothing</span></span>
+    </div>
+    <nav class="header-nav" id="header-nav">
+      <a data-page="store" class="active">Tienda</a>
+      <a data-page="wishlist"><i class="fas fa-heart"></i> Favoritos</a>
+    </nav>
+    <div class="header-actions">
+      <span id="guest-actions">
+        <button class="hbtn" onclick="openAuth()" aria-label="Cuenta">
+          <i class="fa-regular fa-user"></i>
+        </button>
+      </span>
+      <span id="user-actions" style="display:none">
+        <a data-page="orders" style="cursor:pointer;color:var(--text2);font-size:.72rem;font-weight:500;text-decoration:none;transition:color .3s;letter-spacing:1px;text-transform:uppercase"><i class="fa-regular fa-box"></i> Mis Pedidos</a>
+        <span id="user-name-display" style="font-size:.72rem;color:var(--gold);font-weight:600;margin:0 6px"></span>
+        <button class="hbtn" onclick="logoutUser()" aria-label="Salir">
+          <i class="fa-regular fa-right-from-bracket"></i>
+        </button>
+      </span>
+      <button id="cart-btn" aria-label="Carrito">
+        <i class="fa-regular fa-bag-shopping"></i>
+        <span class="cart-count" style="display:none">0</span>
+      </button>
+      <div class="header-socials">
+        <a href="https://wa.me/573001234567" target="_blank" class="header-social-link" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+        <a href="https://instagram.com/graciaclothing" target="_blank" class="header-social-link" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+      </div>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Modo oscuro">
+        <i class="fa-regular fa-moon"></i>
+      </button>
+      <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ===== PAGES ===== -->
+<div id="page-store" class="page active">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-subtitle">Coleccion 2026</div>
+      <h1 class="hero-title">Elegancia que<br><span>Define tu Estilo</span></h1>
+      <p class="hero-desc">Descubre nuestra exclusiva coleccion de moda femenina. Cada pieza disenada para realzar tu belleza unica.</p>
+      <a class="btn btn-gold" onclick="document.getElementById('categories').scrollIntoView({behavior:'smooth'})">Explorar Coleccion</a>
+    </div>
+  </section>
+
+  <!-- TRUST BAR -->
+  <div class="trust-bar">
+    <div class="trust-item"><i class="fa-regular fa-truck-fast"></i> Envio gratis +$149.990</div>
+    <div class="trust-item"><i class="fa-regular fa-rotate-left"></i> Devolucion 15 dias</div>
+    <div class="trust-item"><i class="fa-regular fa-lock"></i> Pago 100% seguro</div>
+    <div class="trust-item"><i class="fa-regular fa-badge-check"></i> Garantia de calidad</div>
+  </div>
+
+  <!-- CATEGORIES -->
+  <section class="section" id="categories">
+    <h2 class="section-title reveal">Nuestra Coleccion</h2>
+    <p class="section-subtitle reveal">Encuentra el look perfecto para cada ocasion</p>
+    <div class="category-pills">
+      <button class="pill active" data-cat="">Todas</button>
+      <button class="pill" data-cat="Pantalones">Pantalones</button>
+      <button class="pill" data-cat="Blusas">Blusas</button>
+      <button class="pill" data-cat="Corsets">Corsets</button>
+      <button class="pill" data-cat="Buzos">Buzos</button>
+      <button class="pill" data-cat="Vestidos">Vestidos</button>
+      <button class="pill" data-cat="Faldas">Faldas</button>
+      <button class="pill" data-cat="Bodies">Bodies</button>
+    </div>
+    <form class="search-bar" id="search-form">
+      <input type="text" id="search-input" placeholder="Buscar productos..." aria-label="Buscar">
+      <button type="submit"><i class="fa-regular fa-magnifying-glass"></i></button>
+    </form>
+    <div class="product-grid" id="product-grid">
+      <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--text2)">Cargando productos...</div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== WISHLIST PAGE ===== -->
+<div id="page-wishlist" class="page section" style="padding-top:120px;">
+  <h2 class="section-title reveal">Mis Favoritos</h2>
+  <p class="section-subtitle reveal">Productos que te gustaron</p>
+  <div class="wishlist-grid" id="wishlist-grid">
+    <p style="text-align:center;color:var(--text2);padding:40px">Cargando...</p>
+  </div>
+</div>
+
+<!-- ===== ORDERS PAGE ===== -->
+<div id="page-orders" class="page section" style="padding-top:120px;">
+  <h2 class="section-title reveal">Mis Pedidos</h2>
+  <p class="section-subtitle reveal">Historial de tus compras</p>
+  <div id="orders-container" style="max-width:800px;margin:0 auto">
+    <div id="orders-list"></div>
+  </div>
+</div>
+
+<!-- ===== PRODUCT DETAIL PAGE ===== -->
+<div id="page-product" class="page section" style="padding-top:120px;">
+  <div class="container" id="product-detail-container">
+    <button class="btn btn-outline" onclick="navigateTo('store')" style="margin-bottom:24px">&larr; Volver a tienda</button>
+    <div id="product-detail-content" style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start">
+      <div id="pd-image" style="position:sticky;top:140px"></div>
+      <div id="pd-info"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CART SIDEBAR ===== -->
+<div class="cart-overlay" id="cart-overlay"></div>
+<div class="cart-sidebar" id="cart-sidebar">
+  <div class="cart-header">
+    <h2>Carrito</h2>
+    <button class="cart-close" id="cart-close">&times;</button>
+  </div>
+  <div class="cart-items" id="cart-items">
+    <div class="cart-empty"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="50"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/></svg><p>Tu carrito esta vacio</p></div>
+  </div>
+  <div class="cart-footer">
+    <div class="coupon-row">
+      <input type="text" id="coupon-input" placeholder="Codigo de descuento">
+      <button class="btn btn-outline btn-sm" id="apply-coupon">Aplicar</button>
+    </div>
+    <div id="coupon-msg" class="coupon-msg"></div>
+    <div class="cart-total">
+      <span>Subtotal</span>
+      <span id="cart-total-amount">$0.00</span>
+    </div>
+    <div class="cart-total" id="cart-discount-row" style="display:none;font-size:.85rem;color:var(--success)">
+      <span>Descuento</span>
+      <span id="cart-discount-amount">-$0.00</span>
+    </div>
+    <button class="btn btn-gold" id="checkout-btn" style="width:100%">Proceder al Pago</button>
+  </div>
+</div>
+
+<!-- ===== CHECKOUT MODAL ===== -->
+<div class="modal-overlay" id="checkout-modal">
+  <div class="modal modal-lg">
+    <button class="close-modal" id="checkout-close">&times;</button>
+    <div id="checkout-view-selector">
+      <div id="checkout-view-method" class="checkout-view active">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+          <img src="/uploads/images/f769185ca2924de39fd39f4eed50839b.jpg" alt="Gracia" class="checkout-logo">
+          <h2 style="margin:0">Finalizar Pedido</h2>
+        </div>
+
+        <div class="checkout-steps">
+          <div class="checkout-step active" id="cs-method"><span class="step-num">1</span> Metodo</div>
+          <div class="checkout-step" id="cs-confirm"><span class="step-num">2</span> Confirmar</div>
+          <div class="checkout-step" id="cs-result"><span class="step-num">3</span> Resultado</div>
+        </div>
+
+        <!-- Step 1: Method Selection -->
+        <div class="checkout-panel active" id="check-step-1">
+          <p class="checkout-subtitle">Elegi tu medio de pago preferido</p>
+
+          <div class="pay-methods-grid" id="pay-methods-grid">
+            <div class="pay-method-card" data-method="card" onclick="selectPaymentMethod('card')">
+              <div class="pay-method-icon"><i class="fa-regular fa-credit-card"></i></div>
+              <div class="pay-method-info">
+                <div class="pay-method-name">Tarjeta Debito / Credito</div>
+                <div class="pay-method-desc">Visa, Mastercard, American Express</div>
+              </div>
+              <div class="pay-method-check"><i class="fa-regular fa-circle-check"></i></div>
+            </div>
+            <div class="pay-method-card" data-method="pse" onclick="selectPaymentMethod('pse')">
+              <div class="pay-method-icon"><i class="fa-regular fa-building-columns"></i></div>
+              <div class="pay-method-info">
+                <div class="pay-method-name">PSE</div>
+                <div class="pay-method-desc">Bancolombia, Davivienda, Caja Social +</div>
+              </div>
+              <div class="pay-method-check"><i class="fa-regular fa-circle-check"></i></div>
+            </div>
+            <div class="pay-method-card" data-method="nequi" onclick="selectPaymentMethod('nequi')">
+              <div class="pay-method-icon"><i class="fa-regular fa-mobile-screen-button"></i></div>
+              <div class="pay-method-info">
+                <div class="pay-method-name">Nequi</div>
+                <div class="pay-method-desc">Paga directo desde la app Nequi</div>
+              </div>
+              <div class="pay-method-check"><i class="fa-regular fa-circle-check"></i></div>
+            </div>
+            <div class="pay-method-card" data-method="daviplata" onclick="selectPaymentMethod('daviplata')">
+              <div class="pay-method-icon"><i class="fa-regular fa-wallet"></i></div>
+              <div class="pay-method-info">
+                <div class="pay-method-name">Daviplata</div>
+                <div class="pay-method-desc">Billetera digital Davivienda</div>
+              </div>
+              <div class="pay-method-check"><i class="fa-regular fa-circle-check"></i></div>
+            </div>
+            <div class="pay-method-card" data-method="llave" onclick="selectPaymentMethod('llave')">
+              <div class="pay-method-icon"><i class="fa-regular fa-key"></i></div>
+              <div class="pay-method-info">
+                <div class="pay-method-name">Llave Davivienda</div>
+                <div class="pay-method-desc">Sin numero de tarjeta, solo tu Llave</div>
+              </div>
+              <div class="pay-method-check"><i class="fa-regular fa-circle-check"></i></div>
+            </div>
+            <div class="pay-method-card" data-method="sistecredito" onclick="selectPaymentMethod('sistecredito')">
+              <div class="pay-method-icon"><i class="fa-regular fa-calendar-check"></i></div>
+              <div class="pay-method-info">
+                <div class="pay-method-name">SisteCredito</div>
+                <div class="pay-method-desc">Credito sin tarjeta, paga en cuotas</div>
+              </div>
+              <div class="pay-method-check"><i class="fa-regular fa-circle-check"></i></div>
+            </div>
+            <div class="pay-method-card" data-method="cod" onclick="selectPaymentMethod('cod')">
+              <div class="pay-method-icon"><i class="fa-regular fa-money-bill-1"></i></div>
+              <div class="pay-method-info">
+                <div class="pay-method-name">Contra Entrega</div>
+                <div class="pay-method-desc">Pagas en efectivo cuando recibis el pedido</div>
+              </div>
+              <div class="pay-method-check"><i class="fa-regular fa-circle-check"></i></div>
+            </div>
+          </div>
+
+          <div class="checkout-actions">
+            <button class="btn btn-ghost" onclick="closeCheckoutAndReset()">Cancelar</button>
+            <button class="btn btn-gold" id="checkout-continue-btn" onclick="proceedToConfirm()" disabled>
+              Continuar <i class="fa-regular fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 2: Confirm & Pay -->
+        <div class="checkout-panel" id="check-step-2">
+          <div class="checkout-confirm-layout">
+            <div class="checkout-confirm-main">
+              <h3>Resumen del pedido</h3>
+              <div id="checkout-summary-items"></div>
+
+              <div class="checkout-coupon-section">
+                <div class="form-group" style="margin:0">
+                  <label>Tenes un cupon?</label>
+                  <div class="coupon-row" style="margin:0">
+                    <input type="text" id="checkout-coupon-input" placeholder="Codigo">
+                    <button class="btn btn-outline btn-sm" id="checkout-apply-coupon">Aplicar</button>
+                  </div>
+                  <div id="checkout-coupon-msg" class="coupon-msg"></div>
+                </div>
+              </div>
+
+              <div class="checkout-contact-section">
+                <h4>Datos de contacto</h4>
+                <div class="form-group"><label>Email</label><input type="email" id="checkout-email" required placeholder="tu@email.com"></div>
+                <div class="form-group"><label>Nombre</label><input type="text" id="checkout-name" placeholder="Tu nombre"></div>
+                <div class="form-group"><label>Direccion de entrega</label><input type="text" id="checkout-address" placeholder="Calle, numero, barrio" required></div>
+                <div class="form-group"><label>Ciudad</label><input type="text" id="checkout-city" placeholder="Tu ciudad" required></div>
+                <div id="checkout-location-msg" class="coupon-msg" style="margin-top:4px"></div>
+              </div>
+            </div>
+
+            <div class="checkout-confirm-sidebar">
+              <div class="checkout-summary-card">
+                <h4>Resumen</h4>
+                <div id="checkout-totals">
+                  <div class="checkout-total-row"><span>Subtotal</span><span id="co-subtotal">$0</span></div>
+                  <div class="checkout-total-row" id="co-discount-row" style="display:none"><span>Descuento</span><span id="co-discount" style="color:var(--success)">-$0</span></div>
+                  <div class="checkout-total-row"><span>Envio</span><span id="co-shipping">Gratis</span></div>
+                  <div class="checkout-total-row checkout-total-final"><span>Total</span><span id="co-total">$0</span></div>
+                </div>
+
+                <div id="checkout-payment-summary" class="checkout-payment-summary">
+                  <div class="pay-summary-label">Medio de pago</div>
+                  <div id="co-payment-info" class="pay-summary-value">
+                    <i class="fa-regular fa-credit-card"></i>
+                    <span>Tarjeta Debito / Credito</span>
+                  </div>
+                </div>
+
+                <button class="btn btn-gold" style="width:100%" id="submit-order-btn">
+                  <span>Pagar <span id="co-pay-amount"></span></span>
+                </button>
+                <p class="checkout-secure-note">
+                  <i class="fa-regular fa-lock"></i> Pago 100% seguro procesado por MercadoPago
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="checkout-actions" style="margin-top:14px">
+            <button class="btn btn-ghost" onclick="showCheckoutStep(1)"><i class="fa-regular fa-arrow-left"></i> Volver</button>
+          </div>
+        </div>
+
+        <!-- Step 3: Result -->
+        <div class="checkout-panel" id="check-step-3">
+          <div id="checkout-result-content" class="checkout-result">
+            <div class="checkout-result-loader">
+              <div class="cr-spinner"></div>
+              <h3>Procesando tu pago...</h3>
+              <p>Estamos comunicandonos con MercadoPago para generar el pago.</p>
+            </div>
+          </div>
+          <div class="checkout-actions" id="checkout-result-actions" style="display:none">
+            <button class="btn btn-ghost" onclick="closeCheckoutAndReset()">Cerrar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success View -->
+      <div id="checkout-view-success" class="checkout-view">
+        <div class="checkout-success-content">
+          <div class="cs-icon"><i class="fa-regular fa-circle-check"></i></div>
+          <h2>Pedido confirmado!</h2>
+          <p id="cs-success-message">Recibiras la confirmacion en tu correo electronico.</p>
+          <div id="cs-order-info" class="cs-order-card"></div>
+          <button class="btn btn-gold" onclick="closeCheckoutAndReset()">Seguir comprando</button>
+        </div>
+      </div>
+
+      <!-- Error View -->
+      <div id="checkout-view-error" class="checkout-view">
+        <div class="checkout-success-content">
+          <div class="cs-icon cs-icon-error"><i class="fa-regular fa-circle-xmark"></i></div>
+          <h2>No se pudo procesar</h2>
+          <p id="cs-error-message" style="color:var(--text2)">Ocurrio un error al procesar tu pago. Intenta de nuevo.</p>
+          <button class="btn btn-gold" onclick="resetCheckout()">Intentar de nuevo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer reveal">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <h3>Gracia Clothing</h3>
+      <p>Moda femenina con estilo y elegancia. Descubre piezas unicas disenadas para ti.</p>
+      <div style="display:flex;gap:8px;margin-top:20px">
+        <a href="https://wa.me/573001234567" target="_blank" class="header-social-link" style="border:1px solid var(--border);border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center"><i class="fab fa-whatsapp"></i></a>
+        <a href="https://instagram.com/graciaclothing" target="_blank" class="header-social-link" style="border:1px solid var(--border);border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center"><i class="fab fa-instagram"></i></a>
+      </div>
+    </div>
+    <div>
+      <h4>Categorias</h4>
+      <a onclick="state.category='Vestidos';showPage('store')">Vestidos</a>
+      <a onclick="state.category='Blusas';showPage('store')">Blusas</a>
+      <a onclick="state.category='Pantalones';showPage('store')">Pantalones</a>
+      <a onclick="state.category='Corsets';showPage('store')">Corsets</a>
+    </div>
+    <div>
+      <h4>Ayuda</h4>
+      <a href="#">Preguntas frecuentes</a>
+      <a href="#">Politica de envios</a>
+      <a href="#">Devoluciones</a>
+    </div>
+    <div>
+      <h4>Contacto</h4>
+      <a href="mailto:hola@graciaclothing.com"><i class="fa-regular fa-envelope" style="margin-right:6px"></i>hola@graciaclothing.com</a>
+      <a href="https://wa.me/573001234567" target="_blank"><i class="fab fa-whatsapp" style="margin-right:6px"></i>WhatsApp</a>
+      <a href="https://instagram.com/graciaclothing" target="_blank"><i class="fab fa-instagram" style="margin-right:6px"></i>Instagram</a>
+    </div>
+  </div>
+  <div class="footer-trust">
+    <span><i class="fa-regular fa-lock"></i> Pago seguro</span>
+    <span><i class="fa-regular fa-truck"></i> Envio nacional</span>
+    <span><i class="fa-regular fa-rotate-left"></i> Dev. 15 dias</span>
+    <span><i class="fa-regular fa-badge-check"></i> Garantia</span>
+  </div>
+  <div class="footer-bottom">&copy; 2026 Gracia Clothing. Todos los derechos reservados.</div>
+</footer>
+
+<!-- ===== LIVE CHAT ===== -->
+<button class="chat-btn" id="chat-btn" aria-label="Chat">
+  <i class="fas fa-comment-dots"></i>
+  <span class="chat-unread-badge" id="chat-unread-badge" style="display:none">0</span>
+</button>
+<div class="chat-window" id="chat-window">
+  <div class="chat-header">
+    <div class="chat-header-info">
+      <div class="chat-avatar"><i class="fas fa-comments"></i></div>
+      <div class="chat-header-social">
+        <a href="https://wa.me/573001234567" target="_blank" class="chat-social-link" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+        <a href="https://instagram.com/graciaclothing" target="_blank" class="chat-social-link" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+      </div>
+      <div>
+        <h3>Atencion al Cliente</h3>
+        <span class="chat-status" id="chat-status"><i class="fas fa-circle"></i> En linea</span>
+      </div>
+    </div>
+    <button class="chat-header-close" id="chat-close">&times;</button>
+  </div>
+
+  <div class="chat-body" id="chat-body">
+    <div class="chat-welcome" id="chat-welcome">
+      <div class="chat-welcome-icon"><i class="fas fa-comments"></i></div>
+      <h4>Habla con el equipo</h4>
+      <p>Conectate directamente con nuestro equipo de atencion al cliente.</p>
+      <button class="btn btn-gold btn-sm" id="chat-start-btn" style="width:100%;margin-top:12px">Chatear con nosotros</button>
+    </div>
+
+    <div class="chat-guest-form" id="chat-guest-form" style="display:none">
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" id="chat-guest-name" placeholder="Tu nombre">
+      </div>
+      <div class="form-group">
+        <label>Mensaje</label>
+        <textarea id="chat-guest-message" rows="3" placeholder="En que podemos ayudarte?"></textarea>
+      </div>
+      <button class="btn btn-gold btn-sm" id="chat-guest-send" style="width:100%">Enviar</button>
+      <button class="btn btn-outline btn-sm" id="chat-guest-back" style="width:100%;margin-top:8px">Volver</button>
+    </div>
+
+    <div class="chat-conv-list" id="chat-conv-list" style="display:none">
+      <div class="chat-conv-header">
+        <button class="chat-back-btn" id="chat-conv-back"><i class="fas fa-arrow-left"></i></button>
+        <span>Tus conversaciones</span>
+        <button class="chat-new-btn" id="chat-conv-new"><i class="fas fa-plus"></i></button>
+      </div>
+      <div id="chat-conv-items"></div>
+    </div>
+
+    <div class="chat-conversation" id="chat-conversation" style="display:none">
+      <div class="chat-msg-area" id="chat-msg-area"></div>
+      <div class="chat-typing" id="chat-typing" style="display:none">
+        <span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>
+        <span style="font-size:.65rem;color:var(--text2);margin-left:6px">Escribiendo...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-footer" id="chat-footer" style="display:none">
+    <input type="text" id="chat-input" placeholder="Escribe un mensaje..." maxlength="500">
+    <button id="chat-send"><i class="fa-regular fa-paper-plane"></i></button>
+  </div>
+
+  <div class="chat-connecting" id="chat-connecting" style="display:none">
+    <div class="chat-connecting-content">
+      <div class="spinner-sm"></div>
+      <span>Conectando...</span>
+    </div>
+  </div>
+</div>
+
+<!-- Social floating -->
+<div class="social-floating" id="social-floating">
+  <a href="https://wa.me/573001234567" target="_blank" class="wa" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+  <a href="https://instagram.com/graciaclothing" target="_blank" class="ig" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+</div>
+
+<!-- ===== CONTACT FORM ===== -->
+<div class="section reveal" style="border-top:1px solid var(--border)">
+  <h2 class="section-title">Contactanos</h2>
+  <p class="section-subtitle">Dejanos tu mensaje y te responderemos pronto</p>
+  <div style="max-width:480px;margin:0 auto">
+    <form id="contact-form">
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" id="contact-name" required>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="contact-email" required>
+      </div>
+      <div class="form-group">
+        <label>Mensaje</label>
+        <textarea id="contact-message" rows="4" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Enviar Mensaje</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== AUTH MODAL ===== -->
+<div class="modal-overlay" id="authModal">
+  <div class="modal">
+    <button class="close-modal" onclick="closeModal('authModal')">&times;</button>
+    <h2>Mi Cuenta</h2>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchAuth('login')">Ingresar</div>
+      <div class="auth-tab" onclick="switchAuth('register')">Registrarse</div>
+    </div>
+    <form class="auth-form active" id="loginForm">
+      <div class="form-group"><label>Email</label><input type="email" id="loginEmail" required></div>
+      <div class="form-group"><label>Contrasena</label><div class="pwd-wrap"><input type="password" id="loginPass" required><button type="button" class="pwd-toggle" onclick="const i=this.previousElementSibling;i.type=i.type==='password'?'text':'password';this.classList.toggle('show')"><i class="fa-regular fa-eye"></i></button></div></div>
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">Ingresar</button>
+    </form>
+    <form class="auth-form" id="registerForm">
+      <div class="form-group"><label>Nombre</label><input type="text" id="regName" required></div>
+      <div class="form-group"><label>Email</label><input type="email" id="regEmail" required></div>
+      <div class="form-group"><label>Telefono</label><input type="tel" id="regPhone"></div>
+      <div class="form-group"><label>Contrasena</label><div class="pwd-wrap"><input type="password" id="regPass" required><button type="button" class="pwd-toggle" onclick="const i=this.previousElementSibling;i.type=i.type==='password'?'text':'password';this.classList.toggle('show')"><i class="fa-regular fa-eye"></i></button></div></div>
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">Crear Cuenta</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/frontend/js/api.js"></script>
+<script src="/frontend/js/script.js"></script>
+
+<script>
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openAuth() { document.getElementById('authModal').classList.add('open'); }
+
+function switchAuth(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.textContent.includes(tab === 'login' ? 'Ingresar' : 'Registrarse')));
+  document.querySelectorAll('.auth-form').forEach(f => f.classList.toggle('active', (tab === 'login' && f.id === 'loginForm') || (tab === 'register' && f.id === 'registerForm')));
+}
+
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  btn.disabled = true; btn.textContent = 'Ingresando...';
+  try {
+    const r = await api.login(document.getElementById('loginEmail').value, document.getElementById('loginPass').value);
+    state.token = r.access_token; state.user = r.user;
+    save('token'); save('user');
+    closeModal('authModal');
+    updateAuthUI();
+    if (r.user.role === 'admin') {
+      window.location.href = '/admin';
+      return;
+    }
+    showToast(`Bienvenida, ${r.user.name}!`);
+  } catch (err) { showToast(err.message); }
+  btn.disabled = false; btn.textContent = 'Ingresar';
+});
+
+document.getElementById('registerForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  btn.disabled = true; btn.textContent = 'Registrando...';
+  try {
+    const r = await api.register(document.getElementById('regName').value, document.getElementById('regEmail').value, document.getElementById('regPass').value, document.getElementById('regPhone').value);
+    state.token = r.access_token; state.user = r.user;
+    save('token'); save('user');
+    closeModal('authModal');
+    updateAuthUI();
+    showToast('Cuenta creada!');
+  } catch (err) { showToast(err.message); }
+  btn.disabled = false; btn.textContent = 'Crear Cuenta';
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  updateAuthUI();
+  document.getElementById('contact-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    try {
+      await api.sendMessage({ name: document.getElementById('contact-name').value, email: document.getElementById('contact-email').value, message: document.getElementById('contact-message').value });
+      showToast('Mensaje enviado');
+      e.target.reset();
+    } catch (err) { showToast(err.message || 'Error'); }
+    btn.disabled = false; btn.textContent = 'Enviar Mensaje';
+  });
+});
+</script>
+
+</body>
+</html>
