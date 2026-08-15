@@ -6,20 +6,24 @@ from contextlib import asynccontextmanager
 
 sys.path.append(str(Path(__file__).resolve().parent))
 
-import sentry_sdk
+try:
+    import sentry_sdk
+except ImportError:
+    sentry_sdk = None
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, HTMLResponse
 from database import engine, Base, SessionLocal
 from models import User, UserRole, Product, ProductVariant, FAQ, Coupon
 from auth import hash_password
 from middleware.error_handler import global_error_handler
+import json
 import socketio
 
 SENTRY_DSN = os.getenv("SENTRY_DSN", "")
-if SENTRY_DSN:
+if SENTRY_DSN and sentry_sdk:
     sentry_sdk.init(
         dsn=SENTRY_DSN,
         environment=os.getenv("ENVIRONMENT", "development"),
@@ -36,26 +40,53 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("gracia")
 
-sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
+# ─── Orígenes permitidos (CORS) ─────────────────────────────
+allowed_origins_str = os.getenv("CORS_ORIGINS", "")
+if ENVIRONMENT == "production":
+    # En producción NO se permite wildcard con credenciales.
+    # Si no se configura CORS_ORIGINS, se asume same-origin.
+    if not allowed_origins_str or allowed_origins_str == "*":
+        allowed_origins = []
+    else:
+        allowed_origins = [o.strip() for o in allowed_origins_str.split(",") if o.strip()]
+else:
+    allowed_origins = ["*"]
+
+sio = socketio.AsyncServer(
+    async_mode="asgi",
+    cors_allowed_origins=allowed_origins,
+)
 fastapi_app = FastAPI(title="Gracia Clothing API", version="2.0.0")
 app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)
 
-# ─── Production middleware ────────────────────────────────
-allowed_origins_str = os.getenv("CORS_ORIGINS", "*")
-allowed_origins = allowed_origins_str.split(",") if allowed_origins_str != "*" else ["*"]
 fastapi_app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins if ENVIRONMENT == "production" else ["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 if ENVIRONMENT == "production":
-    fastapi_app.add_middleware(
-        TrustedHostMiddleware,
-        allowed_hosts=allowed_origins,
-    )
+    # TrustedHost necesita hostnames (sin esquema), no URLs.
+    # Se incluye localhost para el HEALTHCHECK del Dockerfile y *.onrender.com
+    # como valor seguro por defecto para los servicios de Render.
+    hosts = ["localhost", "127.0.0.1"]
+    for o in allowed_origins:
+        host = o.split("://")[-1].rstrip("/").split("/")[0]
+        if host and host not in hosts:
+            hosts.append(host)
+    extra_hosts = [h.strip() for h in os.getenv("ALLOWED_HOSTS", "").split(",") if h.strip()]
+    hosts.extend(h for h in extra_hosts if h not in hosts)
+    if "*.onrender.com" not in hosts:
+        hosts.append("*.onrender.com")
+    fastapi_app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
+
+# Seguridad: cabeceras HTTP y rate limiting
+from middleware.security_headers import SecurityHeadersMiddleware
+from middleware.rate_limit import RateLimitMiddleware
+fastapi_app.add_middleware(RateLimitMiddleware)
+fastapi_app.add_middleware(SecurityHeadersMiddleware)
 
 # Global error handler (no stack traces leaked in production)
 fastapi_app.middleware("http")(global_error_handler)
@@ -81,29 +112,123 @@ def serve_admin():
     return FileResponse(FRONTEND_DIR / "admin" / "index.html")
 
 
-@fastapi_app.get("/robots.txt")
-def robots():
-    return PlainTextResponse("""User-agent: *
-Allow: /
-Sitemap: https://graciaclothing.com/sitemap.xml
-""")
+@fastapi_app.get("/reset-password")
+def serve_reset_password():
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+SITE_URL = os.getenv("FRONTEND_URL", "https://graciaclothing.com").rstrip("/")
+
+
+def serve_html_with_meta(html: str, title: str, description: str, image: str,
+                         url: str, product_json: dict | None = None) -> HTMLResponse:
+    from html import escape as _escape
+    title = _escape(title)
+    description = _escape(description)
+    image = _escape(image)
+    url = _escape(url)
+    tags = f"""
+  <title>{title}</title>
+  <meta name="description" content="{description}">
+  <link rel="canonical" href="{url}">
+  <meta property="og:site_name" content="Gracia Clothing">
+  <meta property="og:title" content="{title}">
+  <meta property="og:description" content="{description}">
+  <meta property="og:type" content="product">
+  <meta property="og:url" content="{url}">
+  <meta property="og:image" content="{image}">
+  <meta property="og:locale" content="es_CO">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{title}">
+  <meta name="twitter:description" content="{description}">
+  <meta name="twitter:image" content="{image}">
+"""
+    if product_json:
+        tags += f'<script type="application/ld+json">{json.dumps(product_json, ensure_ascii=False)}</script>\n'
+
+    html = html.replace("</head>", tags + "</head>")
+    return HTMLResponse(html)
 
 
 @fastapi_app.get("/producto/{slug}")
 def serve_product(slug: str):
-    return FileResponse(FRONTEND_DIR / "index.html")
+    db = SessionLocal()
+    try:
+        p = db.query(Product).filter(
+            Product.status == "active", Product.slug == slug
+        ).first()
+        if not p:
+            p = db.query(Product).filter(Product.status == "active").all()
+            p = next((x for x in p if (x.slug or "").lower() == slug.lower() or
+                      x.name.lower().replace(" ", "-") == slug.lower().replace(" ", "-")), None)
+        if not p:
+            return FileResponse(FRONTEND_DIR / "index.html")
+
+        image = p.image or "https://graciaclothing.com/frontend/assets/logo.svg"
+        url = f"{SITE_URL}/producto/{slug}"
+        product_json = {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": p.name,
+            "description": (p.description or "")[:300],
+            "image": image,
+            "url": url,
+            "brand": {"@type": "Brand", "name": "Gracia Clothing"},
+            "offers": {
+                "@type": "Offer",
+                "price": p.price,
+                "priceCurrency": "COP",
+                "availability": "https://schema.org/InStock" if p.stock > 0 else "https://schema.org/OutOfStock",
+                "url": url,
+            },
+        }
+        return serve_html_with_meta(
+            (FRONTEND_DIR / "index.html").read_text(encoding="utf-8"),
+            title=f"{p.name} — Gracia Clothing",
+            description=(p.description or "")[:160],
+            image=image,
+            url=url,
+            product_json=product_json,
+        )
+    finally:
+        db.close()
+
+
+@fastapi_app.get("/robots.txt")
+def robots():
+    return PlainTextResponse(f"""User-agent: *
+Allow: /
+Sitemap: {SITE_URL}/sitemap.xml
+""")
 
 
 @fastapi_app.get("/sitemap.xml")
 def sitemap():
-    return PlainTextResponse("""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://graciaclothing.com/</loc><priority>1.0</priority></url>
-  <url><loc>https://graciaclothing.com/#nuevo</loc><priority>0.9</priority></url>
-  <url><loc>https://graciaclothing.com/#coleccion</loc><priority>0.8</priority></url>
-  <url><loc>https://graciaclothing.com/#faq-sec</loc><priority>0.6</priority></url>
-</urlset>
-""", media_type="application/xml")
+    from xml.sax.saxutils import escape
+    db = SessionLocal()
+    try:
+        products = db.query(Product).filter(Product.status == "active").all()
+        urls = [f"<url><loc>{SITE_URL}/</loc><priority>1.0</priority></url>"]
+        urls.append(f"<url><loc>{SITE_URL}/admin</loc><priority>0.3</priority></url>")
+        for p in products:
+            slug = escape((p.slug or p.name.lower().replace(" ", "-")))
+            urls.append(f"<url><loc>{SITE_URL}/producto/{slug}</loc><priority>0.8</priority><lastmod>{p.created_at.date().isoformat() if p.created_at else ''}</lastmod></url>")
+        body = "\n".join(urls)
+        return PlainTextResponse(
+            f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n{body}\n</urlset>',
+            media_type="application/xml",
+        )
+    finally:
+        db.close()
+
+
+@fastapi_app.get("/api/config")
+def app_config():
+    return {
+        "GA_ID": os.getenv("GA_MEASUREMENT_ID", ""),
+        "META_PIXEL_ID": os.getenv("META_PIXEL_ID", ""),
+        "SITE_URL": SITE_URL,
+    }
 
 
 fastapi_app.include_router(auth.router, prefix="/api")
@@ -127,22 +252,37 @@ async def lifespan(app: FastAPI):
     from events import init_socketio
     init_socketio(sio)
     Base.metadata.create_all(bind=engine)
+
+    # Migración runtime: agregar columna guest_token si no existe
+    _migrate_runtime()
+
     db = SessionLocal()
 
-    admin_email = os.getenv("SEED_ADMIN_EMAIL", "admin@gracia.moda")
-    admin_pass = os.getenv("SEED_ADMIN_PASSWORD", "Admin123!")
+    admin_email = os.getenv("SEED_ADMIN_EMAIL", "")
+    admin_pass = os.getenv("SEED_ADMIN_PASSWORD", "")
+    if ENVIRONMENT == "production" and not (admin_email and admin_pass):
+        raise RuntimeError(
+            "SEED_ADMIN_EMAIL y SEED_ADMIN_PASSWORD deben configurarse en producción."
+            " No se usan credenciales por defecto."
+        )
+
     admin = db.query(User).filter(User.role == UserRole.admin.value).first()
     if not admin:
-        admin = User(
-            name="Admin Gracia",
-            email=admin_email,
-            password_hash=hash_password(admin_pass),
-            role="admin",
-        )
-        db.add(admin)
+        if not (admin_email and admin_pass):
+            logger.warning("No se creó admin: faltan SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD (solo dev)")
+        else:
+            admin = User(
+                name="Admin Gracia",
+                email=admin_email,
+                password_hash=hash_password(admin_pass),
+                role="admin",
+            )
+            db.add(admin)
     else:
-        admin.email = admin_email
-        admin.password_hash = hash_password(admin_pass)
+        # Solo actualizar email/password si se pasaron explícitamente (no pisar cambios manuales)
+        if admin_email and admin_pass:
+            admin.email = admin_email
+            admin.password_hash = hash_password(admin_pass)
     db.commit()
 
     seed_products(db)
@@ -155,6 +295,20 @@ async def lifespan(app: FastAPI):
 
     db.close()
     yield
+
+
+def _migrate_runtime():
+    """Agrega columnas nuevas a tablas existentes sin romper la DB (SQLite y Postgres)."""
+    from sqlalchemy import text, inspect
+    with engine.connect() as conn:
+        inspector = inspect(conn)
+        if "conversations" not in inspector.get_table_names():
+            return
+        cols = {c["name"] for c in inspector.get_columns("conversations")}
+    if "guest_token" in cols:
+        return
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE conversations ADD COLUMN guest_token VARCHAR(128)"))
 
 
 fastapi_app.router.lifespan_context = lifespan
@@ -180,6 +334,8 @@ def seed_products(db):
         {"name": "Buzo Cropped", "name_en": "Cropped Sweatshirt", "description": "Buzo corto con cremallera.", "description_en": "Cropped zip-up hoodie.", "price": 54.99, "old_price": 69.99, "category": "Buzos", "category_en": "Sweatshirts", "stock": 32, "image": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500", "featured": False},
     ]
     for it in items:
+        slug = it["name"].lower().replace(" ", "-")
+        it["slug"] = slug
         p = Product(**it)
         db.add(p)
         db.flush()

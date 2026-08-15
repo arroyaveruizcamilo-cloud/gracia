@@ -45,8 +45,11 @@
       <a href="#" data-page="orders"><i class="fas fa-shopping-cart"></i><span>Pedidos</span></a>
       <a href="#" data-page="chat" id="admin-chat-nav"><i class="fas fa-comments"></i><span>Chat <span id="admin-chat-badge" style="display:none;background:var(--danger);color:#fff;font-size:.55rem;padding:1px 6px;border-radius:8px;margin-left:4px">0</span></span></a>
       <a href="#" data-page="messages"><i class="fas fa-envelope"></i><span>Mensajes</span></a>
-      <a href="#" data-page="marketing"><i class="fas fa-tag"></i><span>Cupones</span></a>
+      <a href="#" data-page="customers"><i class="fas fa-users"></i><span>Clientes</span></a>
+      <a href="#" data-page="catalog"><i class="fas fa-th-large"></i><span>Catálogo</span></a>
+      <a href="#" data-page="marketing"><i class="fas fa-tag"></i><span>Marketing</span></a>
       <a href="#" data-page="faqs"><i class="fas fa-question-circle"></i><span>FAQs</span></a>
+      <a href="#" data-page="reviews"><i class="fas fa-star"></i><span>Reseñas</span></a>
       <a href="#" data-page="analytics"><i class="fas fa-chart-bar"></i><span>Analíticas</span></a>
     </nav>
     <div class="sidebar-footer">
@@ -93,7 +96,7 @@
         <button class="btn btn-gold" onclick="openProductForm()" style="width:auto"><i class="fas fa-plus"></i> Nuevo Producto</button>
       </div>
       <div class="section-card">
-        <div class="table-wrap"><table id="products-table"><thead><tr><th>ID</th><th>Img</th><th>Nombre</th><th>Precio</th><th>Cat</th><th>Stock</th><th>Var</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="8" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap"><table id="products-table"><thead><tr><th>ID</th><th>Img</th><th>Nombre</th><th>Precio</th><th>Cat</th><th>Stock</th><th>Var</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="9" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
       </div>
     </div>
 
@@ -153,6 +156,43 @@
       </div>
     </div>
 
+    <!-- CUSTOMERS -->
+    <div class="page-section" id="page-customers">
+      <h2 style="font-family:var(--font-d);margin-bottom:20px">Clientes</h2>
+      <div class="section-card">
+        <div class="table-wrap"><table id="customers-table"><thead><tr><th>ID</th><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Pedidos</th><th>Total Gasto</th><th>Último Pedido</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="9" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- CATALOG (Categorías + Colecciones + Banners) -->
+    <div class="page-section" id="page-catalog">
+      <h2 style="font-family:var(--font-d);margin-bottom:20px">Catálogo</h2>
+
+      <div class="section-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2>Categorías</h2>
+          <button class="btn btn-sm btn-gold" onclick="openCategoryForm()"><i class="fas fa-plus"></i> Nueva</button>
+        </div>
+        <div class="table-wrap"><table id="categories-table"><thead><tr><th>Nombre</th><th>Slug</th><th>Productos</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="6" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+
+      <div class="section-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2>Colecciones</h2>
+          <button class="btn btn-sm btn-gold" onclick="openCollectionForm()"><i class="fas fa-plus"></i> Nueva</button>
+        </div>
+        <div class="table-wrap"><table id="collections-table"><thead><tr><th>Nombre</th><th>Slug</th><th>Productos</th><th>Destacada</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="6" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+
+      <div class="section-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h2>Banners</h2>
+          <button class="btn btn-sm btn-gold" onclick="openBannerForm()"><i class="fas fa-plus"></i> Nuevo</button>
+        </div>
+        <div class="table-wrap"><table id="banners-table"><thead><tr><th>Imagen</th><th>Título</th><th>Subtítulo</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="6" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
     <!-- MARKETING / CUPONES -->
     <div class="page-section" id="page-marketing">
       <h2 style="font-family:var(--font-d);margin-bottom:20px">Cupones de Descuento</h2>
@@ -170,7 +210,17 @@
       </div>
       <div class="section-card">
         <h2>Cupones Existentes</h2>
-        <div class="table-wrap"><table id="coupons-table"><thead><tr><th>Código</th><th>Valor</th><th>Compra Mín</th><th>Usos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="6" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap"><table id="coupons-table"><thead><tr><th>Código</th><th>Valor</th><th>Compra Mín</th><th>Usos</th><th>Vence</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="7" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+      <div class="section-card">
+        <h2>Notificación Push a Todos</h2>
+        <p style="color:var(--text2);font-size:.9rem;margin-bottom:12px">Se envía en vivo a todos los clientes conectados. Usa mensajes como "¡Nueva colección disponible!" o "Envío gratis hoy".</p>
+        <form id="notif-form" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end">
+          <div class="form-group"><label>Ícono</label><select id="notif-type"><option value="info">ℹ️ Info</option><option value="promo">🔥 Promo</option><option value="sale">🎉 Oferta</option></select></div>
+          <div class="form-group"><label>Título</label><input type="text" id="notif-title" placeholder="¡Nueva colección!" required></div>
+          <div class="form-group"><label>Mensaje</label><input type="text" id="notif-body" placeholder="Mira lo nuevo en la tienda"></div>
+          <button type="submit" class="btn btn-gold" style="grid-column:1/-1"><i class="fas fa-paper-plane"></i> Enviar Notificación</button>
+        </form>
       </div>
     </div>
 
@@ -182,6 +232,16 @@
       </div>
       <div class="section-card">
         <div class="table-wrap"><table id="faqs-table"><thead><tr><th>Pregunta</th><th>Respuesta</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="4" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- REVIEWS -->
+    <div class="page-section" id="page-reviews">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h2 style="font-family:var(--font-d)">Reseñas de Clientes</h2>
+      </div>
+      <div class="section-card">
+        <div class="table-wrap"><table id="reviews-table"><thead><tr><th>Cliente</th><th>Producto</th><th>Rating</th><th>Reseña</th><th>Reportada</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="8" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
       </div>
     </div>
 
@@ -272,6 +332,62 @@
           <option value="general">General</option><option value="envíos">Envíos</option>
           <option value="devoluciones">Devoluciones</option><option value="pagos">Pagos</option><option value="productos">Productos</option>
         </select>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Guardar</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="category-modal">
+  <div class="modal" style="max-width:500px">
+    <button class="close-modal" id="category-cancel-btn">&times;</button>
+    <h2 id="category-modal-title">Nueva Categoría</h2>
+    <form id="category-form-element">
+      <input type="hidden" id="category-form-id">
+      <div class="form-group"><label>Nombre</label><input type="text" id="category-name" required></div>
+      <div class="form-group"><label>Slug (URL)</label><input type="text" id="category-slug" placeholder="vestidos"></div>
+      <div class="form-group"><label>Descripción</label><textarea id="category-description" rows="3"></textarea></div>
+      <div class="form-group"><label>Imagen (URL)</label><input type="text" id="category-image"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Orden</label><input type="number" id="category-sort" value="0"></div>
+        <div class="form-group"><label>Activa</label><select id="category-active"><option value="true">Sí</option><option value="false">No</option></select></div>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Guardar</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="collection-modal">
+  <div class="modal" style="max-width:500px">
+    <button class="close-modal" id="collection-cancel-btn">&times;</button>
+    <h2 id="collection-modal-title">Nueva Colección</h2>
+    <form id="collection-form-element">
+      <input type="hidden" id="collection-form-id">
+      <div class="form-group"><label>Nombre</label><input type="text" id="collection-name" required></div>
+      <div class="form-group"><label>Slug (URL)</label><input type="text" id="collection-slug" placeholder="coleccion-2026"></div>
+      <div class="form-group"><label>Descripción</label><textarea id="collection-description" rows="3"></textarea></div>
+      <div class="form-group"><label>Imagen (URL)</label><input type="text" id="collection-image"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Destacada</label><select id="collection-featured"><option value="false">No</option><option value="true">Sí</option></select></div>
+        <div class="form-group"><label>Activa</label><select id="collection-active"><option value="true">Sí</option><option value="false">No</option></select></div>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%">Guardar</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="banner-modal">
+  <div class="modal" style="max-width:500px">
+    <button class="close-modal" id="banner-cancel-btn">&times;</button>
+    <h2 id="banner-modal-title">Nuevo Banner</h2>
+    <form id="banner-form-element">
+      <input type="hidden" id="banner-form-id">
+      <div class="form-group"><label>Título</label><input type="text" id="banner-title"></div>
+      <div class="form-group"><label>Subtítulo</label><input type="text" id="banner-subtitle"></div>
+      <div class="form-group"><label>Imagen (URL)</label><input type="text" id="banner-image" required></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Orden</label><input type="number" id="banner-sort" value="0"></div>
+        <div class="form-group"><label>Activo</label><select id="banner-active"><option value="true">Sí</option><option value="false">No</option></select></div>
       </div>
       <button type="submit" class="btn btn-gold" style="width:100%">Guardar</button>
     </form>

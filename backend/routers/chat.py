@@ -1,13 +1,29 @@
-from fastapi import APIRouter, Depends, HTTPException
+import secrets
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User, ChatMessage, Conversation
 from schemas import ConversationCreate, ConversationOut, ChatMessageOut
-from auth import get_current_user, require_admin
+from auth import get_current_user, get_optional_user, require_admin
 from events import emit_new_message
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
+
+
+def _guest_token_from(request: Request) -> str:
+    return request.headers.get("x-guest-token", "")
+
+
+def _can_access(conv: Conversation, user: User | None, guest_token: str) -> bool:
+    """Controla acceso a una conversación: admin, dueño, o invitado con token."""
+    if user and user.role == "admin":
+        return True
+    if conv.user_id and user and conv.user_id == user.id:
+        return True
+    if not conv.user_id:
+        return bool(guest_token) and conv.guest_token == guest_token
+    return False
 
 
 def conv_to_dict(c: Conversation, db: Session) -> dict:
@@ -88,6 +104,7 @@ def create_guest_conversation(data: ConversationCreate, db: Session = Depends(ge
     conv = Conversation(
         guest_name=data.guest_name or "Invitado",
         guest_email=data.guest_email or "",
+        guest_token=secrets.token_urlsafe(32),
         subject=data.subject or "Consulta",
         status="active",
     )
@@ -102,7 +119,7 @@ def create_guest_conversation(data: ConversationCreate, db: Session = Depends(ge
     db.commit()
     db.refresh(conv)
 
-    return conv_to_dict(conv, db)
+    return {**conv_to_dict(conv, db), "guest_token": conv.guest_token}
 
 
 @router.get("/conversations")
@@ -120,13 +137,14 @@ def get_user_conversations(
 @router.get("/conversations/{conv_id}/messages")
 def get_conversation_messages(
     conv_id: int,
+    request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User | None = Depends(get_optional_user),
 ):
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     if not conv:
         raise HTTPException(status_code=404, detail="Conversación no encontrada")
-    if conv.user_id and conv.user_id != user.id:
+    if not _can_access(conv, user, _guest_token_from(request)):
         raise HTTPException(status_code=403, detail="No autorizado")
 
     msgs = db.query(ChatMessage).filter(
@@ -140,18 +158,19 @@ def get_conversation_messages(
 async def send_message(
     conv_id: int,
     data: dict,
+    request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User | None = Depends(get_optional_user),
 ):
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     if not conv:
         raise HTTPException(status_code=404, detail="Conversación no encontrada")
-    if conv.user_id and conv.user_id != user.id:
+    if not _can_access(conv, user, _guest_token_from(request)):
         raise HTTPException(status_code=403, detail="No autorizado")
 
     msg = ChatMessage(
         conversation_id=conv_id,
-        user_id=user.id,
+        user_id=user.id if user else None,
         message=data.get("message", ""),
     )
     db.add(msg)
@@ -168,13 +187,14 @@ async def send_message(
 @router.post("/conversations/{conv_id}/read")
 def mark_conversation_read(
     conv_id: int,
+    request: Request,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User | None = Depends(get_optional_user),
 ):
     conv = db.query(Conversation).filter(Conversation.id == conv_id).first()
     if not conv:
         raise HTTPException(status_code=404, detail="Conversación no encontrada")
-    if conv.user_id and conv.user_id != user.id:
+    if not _can_access(conv, user, _guest_token_from(request)):
         raise HTTPException(status_code=403, detail="No autorizado")
 
     conv.unread_count = 0

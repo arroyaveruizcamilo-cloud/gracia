@@ -189,6 +189,18 @@ async def admin_products(admin=Depends(require_admin), db: Session = Depends(get
     return result
 
 
+@router.post("/products/{pid}/activate")
+async def admin_activate_product(pid: int, admin=Depends(require_admin),
+                                 db: Session = Depends(get_db)):
+    p = db.query(Product).filter(Product.id == pid).first()
+    if not p:
+        return {"ok": False, "error": "Producto no encontrado"}
+    p.status = "active"
+    p.is_active = True
+    db.commit()
+    return {"ok": True, "status": p.status}
+
+
 # ─── Customers Management ────────────────────────────────────
 @router.get("/customers")
 async def admin_customers(admin=Depends(require_admin), db: Session = Depends(get_db)):

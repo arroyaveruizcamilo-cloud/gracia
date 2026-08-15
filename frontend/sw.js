@@ -1,11 +1,14 @@
-const CACHE_NAME = 'gracia-v2';
+const CACHE_NAME = 'gracia-v3';
+const APP_SHELL = '/frontend/index.html';
 const STATIC_URLS = [
+  '/',
   '/frontend/index.html',
   '/frontend/css/styles.css',
   '/frontend/js/api.js',
   '/frontend/js/script.js',
-
   '/frontend/manifest.json',
+  '/frontend/icons/icon-192.png',
+  '/frontend/icons/icon-512.png',
 ];
 
 self.addEventListener('install', event => {
@@ -27,10 +30,17 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
+  if (request.method !== 'GET') return;
 
   // API calls — network first, fallback to cache
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // Page navigation (/, /producto/...) — network first, fallback to app shell
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request, APP_SHELL));
     return;
   }
 
@@ -53,7 +63,7 @@ async function cacheFirst(request) {
   }
 }
 
-async function networkFirst(request) {
+async function networkFirst(request, fallback) {
   try {
     const response = await fetch(request);
     if (response.ok) {
@@ -64,9 +74,16 @@ async function networkFirst(request) {
   } catch (err) {
     const cached = await caches.match(request);
     if (cached) return cached;
-    return new Response(JSON.stringify({ error: 'offline' }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    if (fallback) {
+      const shell = await caches.match(fallback);
+      if (shell) return shell;
+    }
+    if (request.url.includes('/api/')) {
+      return new Response(JSON.stringify({ error: 'offline' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    return new Response('Offline', { status: 503 });
   }
 }

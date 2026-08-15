@@ -9,10 +9,17 @@ from auth import require_admin
 router = APIRouter(prefix="/products", tags=["Products"])
 
 
+def make_slug(name: str) -> str:
+    import re
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    return slug or "producto"
+
+
 def product_to_dict(p):
     return {
         "id": p.id,
         "name": p.name,
+        "slug": p.slug or make_slug(p.name),
         "description": p.description,
         "price": p.price,
         "old_price": p.old_price,
@@ -21,6 +28,12 @@ def product_to_dict(p):
         "image": p.image,
         "status": p.status,
         "featured": p.featured,
+        "badge": p.badge or "",
+        "is_new": p.is_new,
+        "materials": p.materials or "",
+        "care_instructions": p.care_instructions or "",
+        "delivery_time": p.delivery_time or "",
+        "sku": p.sku or "",
         "variants": [
             {
                 "id": v.id, "size": v.size, "color": v.color,
@@ -65,7 +78,7 @@ def create_product(data: ProductCreate, db: Session = Depends(get_db), admin=Dep
     p = Product(
         name=data.name, description=data.description, price=data.price,
         old_price=data.old_price, category=data.category, stock=data.stock,
-        image=data.image, featured=data.featured,
+        image=data.image, featured=data.featured, slug=make_slug(data.name),
     )
     db.add(p)
     db.flush()
@@ -91,6 +104,8 @@ def update_product(product_id: int, data: ProductCreate, db: Session = Depends(g
 
     for key in ("name", "description", "price", "old_price", "category", "stock", "image", "featured"):
         setattr(p, key, getattr(data, key))
+    if not p.slug:
+        p.slug = make_slug(data.name)
 
     # Update variants
     db.query(ProductVariant).filter(ProductVariant.product_id == product_id).delete()

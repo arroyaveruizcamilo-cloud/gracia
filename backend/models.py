@@ -366,6 +366,7 @@ class Conversation(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     guest_name = Column(String(100), default="")
     guest_email = Column(String(100), default="")
+    guest_token = Column(String(128), nullable=True, index=True)
     subject = Column(String(200), default="")
     status = Column(String(20), default="active")
     unread_count = Column(Integer, default=0)

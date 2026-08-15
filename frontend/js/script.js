@@ -94,10 +94,49 @@ function updateAuthUI() {
   const logged = isLoggedIn();
   document.getElementById('guest-actions').style.display = logged ? 'none' : '';
   document.getElementById('user-actions').style.display = logged ? '' : 'none';
+  document.getElementById('notif-bell-wrap').style.display = logged ? '' : 'none';
   if (logged && state.user) {
     document.getElementById('user-name-display').textContent = state.user.name || state.user.email;
   }
 }
+
+// ===== NOTIFICATIONS =====
+function toggleNotifications() {
+  const panel = document.getElementById('notif-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  if (panel.style.display === 'block') loadNotifications();
+}
+
+async function loadNotifications() {
+  try {
+    const notifs = await api.getMyNotifications(state.token);
+    const list = document.getElementById('notif-list');
+    const unread = notifs.filter(n => !n.read);
+    const badge = document.getElementById('notif-badge');
+    if (unread.length) { badge.textContent = unread.length; badge.style.display = 'block'; }
+    else { badge.style.display = 'none'; }
+    if (!notifs.length) { list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text2);font-size:.85rem">Sin notificaciones</div>'; return; }
+    list.innerHTML = notifs.map(n => `
+      <div onclick="${n.read ? '' : `markNotificationRead(${n.id})`}" style="padding:10px 16px;border-bottom:1px solid var(--border);cursor:pointer;background:${n.read ? 'transparent' : 'rgba(190,157,95,.08)'}">
+        <div style="font-size:.8rem;font-weight:600">${escapeHtml(n.title)}</div>
+        ${n.body ? `<div style="font-size:.75rem;color:var(--text2);margin-top:2px">${escapeHtml(n.body)}</div>` : ''}
+        <div style="font-size:.65rem;color:var(--text2);margin-top:3px">${new Date(n.created_at).toLocaleString()}</div>
+      </div>`).join('');
+  } catch (err) { console.error(err); }
+}
+
+async function markNotificationRead(id) {
+  try {
+    await api.markNotificationRead(id, state.token);
+    loadNotifications();
+  } catch (err) { console.error(err); }
+}
+
+document.addEventListener('click', e => {
+  const panel = document.getElementById('notif-panel');
+  const wrap = document.getElementById('notif-bell-wrap');
+  if (panel && wrap && !wrap.contains(e.target)) panel.style.display = 'none';
+});
 
 function logoutUser() {
   state.token = null;
@@ -170,20 +209,116 @@ function renderProductDetail(p) {
   const sizes = p.variants ? [...new Set(p.variants.map(v => v.size).filter(Boolean))] : [];
 
   $('#pd-image').innerHTML = `
-    <img src="${p.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800'}" alt="${p.name}" style="width:100%;height:auto;border-radius:var(--radius-lg)">
+    <img src="${p.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800'}" alt="${escapeHtml(p.name)}" style="width:100%;height:auto;border-radius:var(--radius-lg)">
     ${p.images && p.images.length ? `<div style="display:flex;gap:8px;margin-top:12px">${p.images.slice(0, 4).map(u => `<img src="${u}" style="width:80px;height:100px;object-fit:cover;border-radius:var(--radius-sm);cursor:pointer;border:2px solid transparent" onclick="document.querySelector('#pd-image img').src='${u}';this.style.borderColor='var(--gold)';document.querySelectorAll('#pd-image .thumb').forEach(t=>t.style.borderColor='transparent')" class="thumb">`).join('')}</div>` : ''}
   `;
 
   $('#pd-info').innerHTML = `
-    <div class="cat-tag" style="margin-bottom:8px">${p.category || 'Categoría'}</div>
-    <h1 style="font-family:var(--font-d);font-size:2rem;margin-bottom:12px">${p.name}</h1>
+    <div class="cat-tag" style="margin-bottom:8px">${escapeHtml(p.category || 'Categoría')}</div>
+    <h1 style="font-family:var(--font-d);font-size:2rem;margin-bottom:12px">${escapeHtml(p.name)}</h1>
     <div class="price" style="font-size:1.5rem;margin-bottom:16px">${fmt(p.price)}${disc ? `<span class="old-price" style="font-size:1rem">${fmt(p.old_price)}</span><span class="badge" style="position:static;display:inline-block;margin-left:12px">-${pct}%</span>` : ''}</div>
-    <p style="color:var(--text2);line-height:1.8;margin-bottom:24px">${p.description || 'Descripción no disponible.'}</p>
+    <p style="color:var(--text2);line-height:1.8;margin-bottom:24px">${escapeHtml(p.description || 'Descripción no disponible.')}</p>
     ${colors.length ? `<div style="margin-bottom:16px"><strong style="font-size:.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--text2)">Colores:</strong><div style="display:flex;gap:8px;margin-top:8px">${colors.map(([name, hex]) => `<span style="width:28px;height:28px;border-radius:50%;background:${hex};border:2px solid var(--border);cursor:pointer" title="${name}"></span>`).join('')}</div></div>` : ''}
     ${sizes.length ? `<div style="margin-bottom:24px"><strong style="font-size:.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--text2)">Tallas:</strong><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">${sizes.map(s => `<span style="padding:6px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem">${s}</span>`).join('')}</div></div>` : ''}
-    <button class="btn btn-gold" onclick="addToCart(${p.id})" style="width:100%;padding:16px">Añadir al carrito</button>
+    ${p.stock <= 0 ? '<p style="color:var(--danger);font-weight:600;margin-bottom:16px"><i class="fas fa-times-circle"></i> Producto agotado — sin stock disponible</p>' : `<p style="color:var(--success);font-weight:600;margin-bottom:16px"><i class="fas fa-check-circle"></i> ${p.stock > 10 ? 'En stock — listo para envío' : `Solo quedan ${p.stock} unidades`}</p>`}
+    <button class="btn btn-gold" onclick="addToCart(${p.id})" style="width:100%;padding:16px" ${p.stock <= 0 ? 'disabled' : ''}>${p.stock <= 0 ? 'Agotado' : 'Añadir al carrito'}</button>
     <button class="btn btn-outline" onclick="toggleWishlist(${p.id})" style="width:100%;margin-top:8px"><i class="fas fa-heart-o"></i> ${state.wishlist.has(p.id) ? 'Quitar de favoritos' : 'Añadir a favoritos'}</button>
   `;
+
+  loadReviews(p.id);
+}
+
+// ===== REVIEWS =====
+function starRow(rating) {
+  return '<span style="color:#e6b91e;letter-spacing:2px;font-size:.9rem">' +
+    Array.from({ length: 5 }, (_, i) => `<i class="fas fa-star${i < Math.round(rating) ? '' : '-o'}"></i>`).join('') +
+    '</span>';
+}
+
+async function loadReviews(productId) {
+  const container = $('#pd-reviews');
+  if (!container) return;
+  try {
+    const data = await api.getProductReviews(productId);
+    renderReviews(data, productId);
+  } catch (e) {
+    container.innerHTML = '';
+  }
+}
+
+function renderReviews(data, productId) {
+  const container = $('#pd-reviews');
+  const dist = data.distribution || {};
+  const maxDist = Math.max(1, ...Object.values(dist));
+
+  container.innerHTML = `
+    <div style="border-top:1px solid var(--border);padding-top:40px">
+      <h2 style="font-family:var(--font-d);margin-bottom:24px">Reseñas de clientes</h2>
+      <div style="display:grid;grid-template-columns:260px 1fr;gap:32px;align-items:start">
+        <div style="text-align:center;padding:24px;border:1px solid var(--border);border-radius:var(--radius-lg)">
+          <div style="font-size:3rem;font-weight:800;font-family:var(--font-d)">${data.average || '—'}</div>
+          <div style="margin:8px 0">${starRow(data.average || 0)}</div>
+          <div style="color:var(--text2);font-size:.85rem">${data.total || 0} reseñas</div>
+        </div>
+        <div>
+          ${[5, 4, 3, 2, 1].map(n => `
+            <div style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.8rem">
+              <span style="width:30px;color:var(--text2)">${n}★</span>
+              <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+                <div style="height:100%;width:${Math.round(((dist[n] || 0) / maxDist) * 100)}%;background:#e6b91e"></div>
+              </div>
+              <span style="width:20px;color:var(--text2)">${dist[n] || 0}</span>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      ${state.token ? `
+        <div style="margin-top:32px;padding:24px;border:1px solid var(--border);border-radius:var(--radius-lg)">
+          <h3 style="font-family:var(--font-d);margin-bottom:16px">Escribí tu reseña</h3>
+          <div style="display:flex;gap:8px;margin-bottom:12px" id="rv-stars">
+            ${Array.from({ length: 5 }, (_, i) => `<i class="fas fa-star rv-star" data-v="${i + 1}" style="font-size:1.4rem;color:#ccc;cursor:pointer" onclick="setRating(${i + 1})"></i>`).join('')}
+          </div>
+          <input type="text" id="rv-title" placeholder="Título (opcional)" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);color:var(--text);margin-bottom:12px">
+          <textarea id="rv-comment" rows="3" placeholder="¿Qué te pareció el producto?" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);color:var(--text);margin-bottom:12px"></textarea>
+          <button class="btn btn-gold" onclick="submitReview(${productId})">Publicar reseña</button>
+        </div>` : `
+        <p style="margin-top:24px;color:var(--text2)"><a href="#" onclick="openAuth('login');return false" style="color:var(--gold)">Iniciá sesión</a> para dejar tu reseña</p>`}
+
+      <div style="margin-top:24px;display:grid;gap:16px">
+        ${(data.reviews || []).map(r => `
+          <div style="padding:20px;border:1px solid var(--border);border-radius:var(--radius-lg)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <strong>${escapeHtml(r.user_name || 'Cliente')}</strong>
+              ${starRow(r.rating)}
+            </div>
+            ${r.title ? `<h4 style="margin-bottom:4px">${escapeHtml(r.title)}</h4>` : ''}
+            <p style="color:var(--text2);line-height:1.7">${escapeHtml(r.comment || '')}</p>
+            <div style="margin-top:8px;font-size:.75rem;color:var(--text2)">${r.created_at ? new Date(r.created_at).toLocaleDateString() : ''}</div>
+          </div>`).join('')}
+        ${!data.reviews || !data.reviews.length ? '<p style="color:var(--text2)">Aún no hay reseñas. ¡Sé el primero!</p>' : ''}
+      </div>
+    </div>
+  `;
+}
+
+let _rvRating = 5;
+function setRating(n) {
+  _rvRating = n;
+  document.querySelectorAll('.rv-star').forEach(s => {
+    s.style.color = parseInt(s.dataset.v) <= n ? '#e6b91e' : '#ccc';
+  });
+}
+
+async function submitReview(productId) {
+  const title = $('#rv-title').value.trim();
+  const comment = $('#rv-comment').value.trim();
+  if (!comment && !title) { showToast('Escribí un comentario o título'); return; }
+  try {
+    const res = await api.createReview({ product_id: productId, rating: _rvRating, title, comment }, state.token);
+    if (res.ok === false) { showToast(res.error); return; }
+    showToast('¡Gracias por tu reseña!');
+    loadReviews(productId);
+  } catch (err) { showToast(err.message); }
 }
 
 // ===== PRODUCTS =====
@@ -216,22 +351,24 @@ function renderProducts(products) {
     const inWish = state.wishlist.has(p.id);
     const hasVariants = p.variants && p.variants.length > 0;
     const colors = hasVariants ? [...new Map(p.variants.map(v => [v.color, v.color_hex])).entries()] : [];
+    const outOfStock = (p.stock || 0) <= 0;
     return `
       <div class="product-card" data-id="${p.id}" onclick="navigateTo('product',{slug:'${(p.slug||p.name).toLowerCase().replace(/[^a-z0-9]+/g,'-')}')}">
         <div class="img-wrap">
-          <img src="${p.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500'}" alt="${p.name}" loading="lazy">
+          <img src="${p.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500'}" alt="${escapeHtml(p.name)}" loading="lazy" style="${outOfStock ? 'filter:grayscale(.9);opacity:.6' : ''}">
           ${disc ? `<span class="badge">-${pct}%</span>` : ''}
+          ${outOfStock ? '<span class="badge" style="background:var(--text);color:#fff;left:auto;right:12px">Agotado</span>' : ''}
           <button class="wishlist-btn ${inWish ? 'active' : ''}" onclick="event.stopPropagation(); toggleWishlist(${p.id})">
             <i class="fas ${inWish ? 'fa-heart' : 'fa-heart-o'}"></i>
           </button>
           <div class="overlay">
-            <button class="btn btn-gold" onclick="event.stopPropagation(); addToCart(${p.id})">Añadir</button>
+            <button class="btn btn-gold" onclick="event.stopPropagation(); addToCart(${p.id})" ${outOfStock ? 'disabled' : ''}>${outOfStock ? 'Agotado' : 'Añadir'}</button>
             <button class="btn btn-outline" onclick="event.stopPropagation(); quickView(${p.id})">Ver</button>
           </div>
         </div>
         <div class="info">
-          <div class="cat-tag">${p.category}</div>
-          <h3>${p.name}</h3>
+          <div class="cat-tag">${escapeHtml(p.category)}</div>
+          <h3>${escapeHtml(p.name)}</h3>
           <div class="price" data-value="${p.price}">${fmt(p.price)}${disc ? `<span class="old-price">${fmt(p.old_price)}</span>` : ''}</div>
           ${colors.length ? `<div class="variants-preview">${colors.map(([name, hex]) => `<span class="variant-dot" style="background:${hex}" title="${name}"></span>`).join('')}</div>` : ''}
         </div>
@@ -256,15 +393,15 @@ async function quickView(id) {
         <button class="close-modal" onclick="this.closest('.modal-overlay').remove()">&times;</button>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
           <div>
-            <img src="${p.image}" alt="${p.name}" style="width:100%;height:auto;object-fit:cover">
+            <img src="${p.image}" alt="${escapeHtml(p.name)}" style="width:100%;height:auto;object-fit:cover">
             ${p.images && p.images.length ? `<div style="display:flex;gap:8px;margin-top:8px">
               ${p.images.slice(0, 4).map(u => `<img src="${u}" style="width:60px;height:80px;object-fit:cover;cursor:pointer;border:1px solid var(--border)" onclick="this.parentElement.parentElement.previousElementSibling.src='${u}'">`).join('')}
             </div>` : ''}
           </div>
           <div>
-            <div class="cat-tag" style="font-size:.7rem;color:var(--gold);text-transform:uppercase;letter-spacing:1.5px">${p.category}</div>
-            <h3 style="font-family:var(--font-d);font-size:1.3rem;margin:8px 0">${p.name}</h3>
-            <p style="color:var(--text2);font-size:.9rem;margin-bottom:12px">${p.description}</p>
+            <div class="cat-tag" style="font-size:.7rem;color:var(--gold);text-transform:uppercase;letter-spacing:1.5px">${escapeHtml(p.category)}</div>
+            <h3 style="font-family:var(--font-d);font-size:1.3rem;margin:8px 0">${escapeHtml(p.name)}</h3>
+            <p style="color:var(--text2);font-size:.9rem;margin-bottom:12px">${escapeHtml(p.description)}</p>
             <div class="price" style="font-size:1.3rem;font-weight:600;color:var(--gold)">
               ${fmt(p.price)}${disc ? `<span class="old-price" style="font-size:1rem;color:var(--text2);text-decoration:line-through;margin-left:8px">${fmt(p.old_price)}</span>` : ''}
             </div>
@@ -288,9 +425,11 @@ async function quickView(id) {
 function addToCart(pid) {
   const p = state.products.find(x => x.id === pid);
   if (!p) return;
+  const maxStock = p.stock || 0;
+  if (maxStock <= 0) { showToast('Producto sin stock'); return; }
   const existing = state.cart.find(i => i.id === pid);
-  if (existing) existing.qty = Math.min(existing.qty + 1, p.stock);
-  else state.cart.push({ id: pid, name: p.name, price: p.price, image: p.image, qty: 1, stock: p.stock });
+  if (existing) existing.qty = Math.min(existing.qty + 1, maxStock);
+  else state.cart.push({ id: pid, name: p.name, price: p.price, image: p.image, qty: 1, stock: maxStock });
   save('cart');
   updateCartUI();
   renderCartItems();
@@ -336,9 +475,9 @@ function renderCartItems() {
   }
   container.innerHTML = state.cart.map(i => `
     <div class="cart-item">
-      <img src="${i.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200'}" alt="${i.name}">
+      <img src="${i.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200'}" alt="${escapeHtml(i.name)}">
       <div class="cart-item-details">
-        <h4>${i.name}</h4>
+        <h4>${escapeHtml(i.name)}</h4>
         <div class="price">${fmt(i.price)}</div>
         <div class="cart-item-qty">
           <button onclick="updateQty(${i.id}, -1)">-</button>
@@ -414,9 +553,9 @@ async function renderWishlist() {
     const items = all.filter(p => ids.includes(p.id));
     grid.innerHTML = items.map(p => `
       <div class="wishlist-item">
-        <img src="${p.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500'}" alt="${p.name}">
+        <img src="${p.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500'}" alt="${escapeHtml(p.name)}">
         <div class="info">
-          <h4>${p.name}</h4>
+          <h4>${escapeHtml(p.name)}</h4>
           <div class="price">${fmt(p.price)}</div>
           <button class="btn btn-gold btn-sm" style="width:100%;margin-top:8px" onclick="addToCart(${p.id}); renderWishlist()">Añadir al Carrito</button>
         </div>
@@ -436,7 +575,7 @@ async function renderWishlist() {
     url.searchParams.delete('order_id');
     window.history.replaceState({}, '', url);
 
-    api.getPaymentStatus(parseInt(orderId))
+    api.getPaymentStatus(parseInt(orderId), state.token)
       .then(data => {
         state.cart = []; save('cart'); updateCartUI();
         if (data.payment_status === 'Pagado') {
@@ -525,9 +664,9 @@ function renderCheckoutSummaryItems() {
   if (!container) return;
   container.innerHTML = state.cart.map(i => `
     <div class="checkout-summary-item">
-      <img src="${i.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200'}" alt="${i.name}">
+      <img src="${i.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200'}" alt="${escapeHtml(i.name)}">
       <div class="info">
-        <div class="name">${i.name}</div>
+        <div class="name">${escapeHtml(i.name)}</div>
         <div class="meta">Cant: ${i.qty}</div>
         <div class="price">${fmt(i.price * i.qty)}</div>
       </div>
@@ -737,6 +876,7 @@ async function loadUserOrders() {
         'Enviado': '#2ecc71', 'Entregado': '#27ae60', 'Cancelado': '#e74c3c',
       }[o.status] || '#6b6863';
       const payStatusColor = o.payment_status === 'Pagado' ? '#2ecc71' : '#f39c12';
+      const hasTracking = o.tracking_number;
       return `
       <div class="order-card" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;overflow:hidden;transition:box-shadow .3s">
         <div class="order-card-header" style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:var(--bg2);border-bottom:1px solid var(--border);cursor:pointer" onclick="this.nextElementSibling.classList.toggle('open')">
@@ -765,6 +905,11 @@ async function loadUserOrders() {
                 </div>
               </div>
             </div>
+            ${hasTracking ? `
+            <div style="background:var(--bg3);padding:12px 16px;border-radius:8px;margin-bottom:16px">
+              <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:4px">Número de guía / seguimiento</div>
+              <div style="font-size:.85rem;font-weight:600">${hasTracking}</div>
+            </div>` : ''}
             <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Productos</div>
             ${o.items.map(i => `
               <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.85rem">
@@ -772,6 +917,7 @@ async function loadUserOrders() {
                 <span style="font-weight:600;color:var(--gold)">${fmt(i.price)}</span>
               </div>
             `).join('')}
+            <button class="btn btn-sm btn-outline" style="margin-top:16px" onclick="openReceipt(${o.id})"><i class="fa-regular fa-file-lines"></i> Ver recibo de pago</button>
           </div>
         </div>
       </div>`;
@@ -779,12 +925,108 @@ async function loadUserOrders() {
   } catch (err) { showToast('Error al cargar pedidos'); }
 }
 
+// ===== RECIBO DE PAGO =====
+async function openReceipt(orderId) {
+  try {
+    const data = await api.getPaymentReceipt(orderId, state.token);
+    const r = data.receipt;
+    const payColor = r.payment_status === 'Pagado' ? 'var(--success)' : 'var(--warning)';
+    $('#receipt-content').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text2)">Pedido</span>
+        <strong>#${r.order_id}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text2)">Cliente</span>
+        <strong>${escapeHtml(r.customer)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text2)">Email</span>
+        <strong style="word-break:break-all;text-align:right">${escapeHtml(r.email)}</strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text2)">Fecha</span>
+        <strong>${new Date(r.created_at).toLocaleString('es-CO')}</strong>
+      </div>
+      <div style="padding:12px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Detalle</div>
+        ${r.items.map(i => `
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:4px 0">
+            <span>${escapeHtml(i.product)} <span style="color:var(--text3)">×${i.quantity}</span></span>
+            <span>${fmt(i.price)}</span>
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:.85rem">
+        <span style="color:var(--text2)">Subtotal</span><span>${fmt(r.subtotal)}</span>
+      </div>
+      ${r.discount ? `<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:.85rem">
+        <span style="color:var(--text2)">Descuento</span><span style="color:var(--success)">-${fmt(r.discount)}</span>
+      </div>` : ''}
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:.85rem">
+        <span style="color:var(--text2)">Envío</span><span>${r.shipping ? fmt(r.shipping) : 'Gratis'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0;font-size:1.05rem;border-top:2px solid var(--border);font-weight:700">
+        <span>Total</span><span style="color:var(--gold)">${fmt(r.total)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0">
+        <span style="color:var(--text2)">Método de pago</span>
+        <span style="text-transform:capitalize">${r.payment_method || 'Contra entrega'}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0">
+        <span style="color:var(--text2)">Estado del pago</span>
+        <strong style="color:${payColor}">${r.payment_status}</strong>
+      </div>
+      <button class="btn btn-gold" style="width:100%;justify-content:center;margin-top:8px" onclick="window.print()"><i class="fa-regular fa-print"></i> Imprimir</button>
+    `;
+    $('#receipt-modal').classList.add('open');
+  } catch (err) { showToast(err.message); }
+}
+
+// ===== SEGUIMIENTO (INVITADOS) =====
+function renderTrackResult(o) {
+  const statusColor = {
+    'Pendiente': '#f39c12', 'Procesando': '#3498db',
+    'Enviado': '#2ecc71', 'Entregado': '#27ae60', 'Cancelado': '#e74c3c',
+  }[o.status] || '#6b6863';
+  const payColor = o.payment_status === 'Pagado' ? 'var(--success)' : 'var(--warning)';
+  $('#track-result').innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <strong style="font-size:1.1rem">Pedido #${o.id}</strong>
+        <span style="display:inline-block;padding:4px 12px;border-radius:100px;font-size:.65rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;background:${statusColor}15;color:${statusColor}">${escapeHtml(o.status)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div style="background:var(--bg3);padding:12px 14px;border-radius:8px">
+          <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:4px">Fecha</div>
+          <div style="font-size:.82rem;font-weight:500">${new Date(o.created_at).toLocaleDateString('es-CO', {year:'numeric',month:'long',day:'numeric'})}</div>
+        </div>
+        <div style="background:var(--bg3);padding:12px 14px;border-radius:8px">
+          <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:4px">Pago</div>
+          <div style="font-size:.82rem;font-weight:600;color:${payColor}">${o.payment_status}</div>
+        </div>
+      </div>
+      ${o.tracking_number ? `
+      <div style="background:var(--bg3);padding:12px 14px;border-radius:8px;margin-bottom:16px">
+        <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:4px">Número de guía / seguimiento</div>
+        <div style="font-size:.9rem;font-weight:700">${escapeHtml(o.tracking_number)}</div>
+      </div>` : ''}
+      <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:8px">Productos</div>
+      ${o.items.map(i => `
+        <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:.85rem">
+          <span>${escapeHtml(i.product_name)} <span style="color:var(--text3)">×${i.quantity}</span></span>
+        </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;padding:12px 0;font-size:1.05rem;font-weight:700;border-top:2px solid var(--border)">
+        <span>Total</span><span style="color:var(--gold)">${fmt(o.total)}</span>
+      </div>
+    </div>`;
+}
 // ===== NOTIFICATIONS =====
 // ===== LIVE CHAT =====
 const chatState = {
   socket: null,
   connected: false,
   currentConvId: null,
+  guestToken: null,
   conversations: [],
   messages: [],
   guestMode: false,
@@ -798,16 +1040,14 @@ function initSocketIO() {
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionAttempts: Infinity,
+    auth: { token: state.token || '' },
   });
 
   chatState.socket.on('connect', () => {
     chatState.connected = true;
     updateChatStatus(true);
     if (chatState.currentConvId) {
-      chatState.socket.emit('join_chat', {
-        conversation_id: chatState.currentConvId,
-        role: 'user',
-      });
+      emitJoinChat();
     }
   });
 
@@ -858,10 +1098,7 @@ function toggleChat() {
       }
     }
     if (chatState.currentConvId) {
-      chatState.socket.emit('join_chat', {
-        conversation_id: chatState.currentConvId,
-        role: 'user',
-      });
+      emitJoinChat();
     }
   }
 }
@@ -905,8 +1142,8 @@ async function showChatConversations() {
       <div class="chat-conv-item" data-id="${c.id}" onclick="openChatConversation(${c.id})">
         <div class="chat-conv-item-avatar"><i class="fas fa-user"></i></div>
         <div class="chat-conv-item-info">
-          <div class="chat-conv-item-name">${c.subject || 'Consulta'}</div>
-          <div class="chat-conv-item-preview">${c.last_message || 'Sin mensajes'}</div>
+          <div class="chat-conv-item-name">${escapeHtml(c.subject || 'Consulta')}</div>
+          <div class="chat-conv-item-preview">${escapeHtml(c.last_message || 'Sin mensajes')}</div>
         </div>
         <div class="chat-conv-item-meta">
           ${c.unread_count > 0 ? `<span class="chat-unread">${c.unread_count}</span>` : ''}
@@ -926,10 +1163,7 @@ async function openChatConversation(convId) {
   $('#chat-msg-area').innerHTML = '';
 
   if (chatState.socket?.connected) {
-    chatState.socket.emit('join_chat', {
-      conversation_id: convId,
-      role: 'user',
-    });
+    emitJoinChat();
   }
 
   if (isLoggedIn()) {
@@ -965,7 +1199,7 @@ function addChatMessage(msg, type) {
   div.innerHTML = `
     ${isAdmin ? '<div class="chat-msg-avatar"><i class="fas fa-comments"></i></div>' : ''}
     <div class="chat-msg-content">
-      <div class="chat-msg-sender">${name}</div>
+      <div class="chat-msg-sender">${escapeHtml(name)}</div>
       <div class="chat-msg-text">${escapeHtml(msg.message)}</div>
       <div class="chat-msg-time">${time}</div>
     </div>
@@ -995,13 +1229,29 @@ async function sendChatMessage() {
   scrollChat();
 
   try {
-    const result = await api.sendChatMessage(chatState.currentConvId, { message: text }, state.token);
+    const result = await api.sendChatMessage(
+      chatState.currentConvId,
+      { message: text },
+      state.token,
+      chatState.guestToken || ''
+    );
     // Replace temp message
     const idx = chatState.messages.findIndex(m => m.id === tempId);
     if (idx !== -1) chatState.messages[idx] = result;
   } catch (err) {
     showToast('Error al enviar mensaje');
   }
+}
+
+function emitJoinChat() {
+  if (!chatState.socket?.connected || !chatState.currentConvId) return;
+  const data = {
+    conversation_id: chatState.currentConvId,
+    role: 'user',
+    user_id: state.user?.id,
+    guest_token: chatState.guestToken || '',
+  };
+  chatState.socket.emit('join_chat', data);
 }
 
 function startNewChatFromGuest() {
@@ -1012,6 +1262,7 @@ function startNewChatFromGuest() {
   api.createGuestConversation({ guest_name: name, message })
     .then(conv => {
       chatState.currentConvId = conv.id;
+      chatState.guestToken = conv.guest_token;
       chatState.messages = [];
       $('#chat-guest-form').style.display = 'none';
       $('#chat-conversation').style.display = 'flex';
@@ -1027,10 +1278,7 @@ function startNewChatFromGuest() {
       }, 'user');
 
       if (chatState.socket?.connected) {
-        chatState.socket.emit('join_chat', {
-          conversation_id: conv.id,
-          role: 'user',
-        });
+        emitJoinChat();
       }
     })
     .catch(err => showToast(err.message || 'Error'));
@@ -1057,6 +1305,7 @@ function startNewChat() {
     api.createConversation({ message: '¡Hola! Necesito ayuda.' }, state.token)
       .then(conv => {
         chatState.currentConvId = conv.id;
+        chatState.guestToken = null;
         addChatMessage({
           message: '¡Hola! Necesito ayuda.',
           created_at: new Date().toISOString(),
@@ -1064,7 +1313,7 @@ function startNewChat() {
           is_admin: false,
         }, 'user');
         if (chatState.socket?.connected) {
-          chatState.socket.emit('join_chat', { conversation_id: conv.id, role: 'user' });
+          emitJoinChat();
         }
       })
       .catch(err => showToast(err.message));
@@ -1102,6 +1351,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Coupon
   $('#apply-coupon')?.addEventListener('click', applyCoupon);
+
+  // Order tracking
+  $('#track-form')?.addEventListener('submit', e => {
+    e.preventDefault();
+    const id = $('#track-id').value.trim();
+    const email = $('#track-email').value.trim();
+    if (!id || !email) return;
+    const btn = e.target.querySelector('button[type=submit]');
+    btn.disabled = true;
+    api.trackOrder(id, email)
+      .then(o => renderTrackResult(o))
+      .catch(err => { $('#track-result').innerHTML = `<div style="color:var(--danger);text-align:center;font-size:.9rem">${err.message}</div>`; })
+      .finally(() => { btn.disabled = false; });
+  });
 
   // Search
   $('#search-form')?.addEventListener('submit', e => {
@@ -1172,6 +1435,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Observe reveal elements
   observeReveal();
+
+  // Register service worker (PWA)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/frontend/sw.js').catch(() => {});
+    });
+  }
 
   // Load initial products
   loadProducts();

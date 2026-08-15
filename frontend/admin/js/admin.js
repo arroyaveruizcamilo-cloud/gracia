@@ -45,7 +45,7 @@ function showAdmin() {
   $('#admin-app').style.display = 'flex';
   $('#admin-user-name').textContent = state.user.name;
   loadDashboard(); loadAdminProducts(); loadAdminOrders(); loadAdminMessages();
-  loadCoupons(); loadFAQs();
+  loadCoupons(); loadFAQs(); loadAdminReviews();
   initAdminSocket();
   loadAdminChatConversations();
 
@@ -222,20 +222,40 @@ async function saveProduct(e) {
 
 async function loadAdminProducts() {
   try {
-    state.products = await api.getProducts('', '');
+    state.products = await api.getAdminProducts(state.token);
     const tbody = $('#products-table tbody');
-    if (!state.products.length) { tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text2)">Sin productos</td></tr>'; return; }
-    tbody.innerHTML = state.products.map(p => `<tr>
+    if (!state.products.length) { tbody.innerHTML = '<tr><td colspan="9" style="color:var(--text2)">Sin productos</td></tr>'; return; }
+    tbody.innerHTML = state.products.map(p => {
+      const active = p.status !== 'inactive';
+      const varStock = (p.variants || [])
+        .filter(v => v.size || v.color)
+        .map(v => `${escapeHtml(v.size||'—')}${v.color?':'+escapeHtml(v.color.slice(0,1)):''}=${v.stock}`)
+        .join(', ');
+      return `<tr style="${active ? '' : 'opacity:.5'}">
       <td>${p.id}</td>
       <td><img src="${p.image||'https://via.placeholder.com/40'}" style="width:40px;height:50px;object-fit:cover"></td>
-      <td>${p.name}</td><td>${fmt(p.price)}</td><td>${p.category}</td><td>${p.stock}</td>
+      <td>${escapeHtml(p.name)} ${active ? '' : '<span style="color:var(--danger);font-size:.7rem">(inactivo)</span>'}</td>
+      <td>${fmt(p.price)}</td><td>${escapeHtml(p.category)}</td>
+      <td>${p.stock} ${varStock ? `<span style="font-size:.65rem;color:var(--text2);display:block">${varStock}</span>` : ''}</td>
       <td>${p.variants?.length || 0} vars</td>
-      <td>
+      <td><span style="color:${active?'var(--success)':'var(--danger)'}">${active?'Activo':'Inactivo'}</span></td>
+      <td style="white-space:nowrap">
         <button class="btn btn-sm btn-warning" onclick="openProductForm(state.products.find(x=>x.id===${p.id}))" style="margin-right:4px"><i class="fas fa-edit"></i></button>
-        <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>
+        ${active
+          ? `<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})"><i class="fas fa-trash"></i></button>`
+          : `<button class="btn btn-sm btn-success" onclick="activateProduct(${p.id})"><i class="fas fa-power-off"></i></button>`}
       </td>
-    </tr>`).join('');
+    </tr>`;
+    }).join('');
   } catch (err) { console.error(err); }
+}
+
+async function activateProduct(id) {
+  try {
+    await api.adminActivateProduct(id, state.token);
+    showToast('Producto reactivado');
+    loadAdminProducts();
+  } catch (err) { showToast(err.message); }
 }
 
 async function deleteProduct(id) {
@@ -251,17 +271,17 @@ async function loadAdminOrders() {
     const tbody = $('#orders-table tbody');
     if (!state.orders.length) { tbody.innerHTML = '<tr><td colspan="7" style="color:var(--text2)">Sin pedidos</td></tr>'; return; }
     tbody.innerHTML = state.orders.map(o => `<tr>
-      <td>#${o.id}</td><td>${o.customer_name||'—'}</td><td>${o.customer_email||'—'}</td>
+      <td>#${o.id}</td><td>${escapeHtml(o.customer_name||'—')}</td><td>${escapeHtml(o.customer_email||'—')}</td>
       <td>${fmt(o.total)}</td>
-      <td><span class="status-badge status-${(o.status||'').toLowerCase()}">${o.status}</span></td>
-      <td><span class="status-badge" style="background:${o.payment_status==='Pagado'?'var(--success)':'var(--warning)'};color:#fff">${o.payment_status}</span></td>
+      <td><span class="status-badge status-${(o.status||'').toLowerCase()}">${escapeHtml(o.status)}</span></td>
+      <td><span class="status-badge" style="background:${o.payment_status==='Pagado'?'var(--success)':'var(--warning)'};color:#fff">${escapeHtml(o.payment_status)}</span></td>
       <td>
         <select onchange="updateOrderStatus(${o.id}, this.value)" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:4px 8px;font-size:.75rem">
           ${['Pendiente','Procesando','Enviado','Entregado','Cancelado'].map(s =>
             `<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`
           ).join('')}
         </select>
-        <input type="text" placeholder="Tracking #" value="${o.tracking_number||''}" style="width:100px;margin-top:4px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:4px;font-size:.7rem" onchange="api.updateTracking(${o.id},{tracking_number:this.value},state.token).catch(()=>{})">
+        <input type="text" placeholder="Tracking #" value="${escapeHtml(o.tracking_number||'')}" style="width:100px;margin-top:4px;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:4px;font-size:.7rem" onchange="api.updateTracking(${o.id},{tracking_number:this.value},state.token).catch(()=>{})">
       </td>
     </tr>`).join('');
   } catch (err) { console.error(err); }
@@ -279,8 +299,8 @@ async function loadAdminMessages() {
     const tbody = $('#messages-table tbody');
     if (!msgs.length) { tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text2)">Sin mensajes</td></tr>'; return; }
     tbody.innerHTML = msgs.map(m => `<tr>
-      <td>${m.name||'—'}</td><td>${m.email||'—'}</td>
-      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.message}</td>
+      <td>${escapeHtml(m.name||'—')}</td><td>${escapeHtml(m.email||'—')}</td>
+      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(m.message)}</td>
       <td>${m.created_at?new Date(m.created_at).toLocaleDateString():'—'}</td>
     </tr>`).join('');
   } catch (err) { console.error(err); }
@@ -294,12 +314,13 @@ async function loadCoupons() {
     if (!coupons.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text2)">Sin cupones</td></tr>'; return; }
     tbody.innerHTML = coupons.map(c => `<tr>
       <td style="font-weight:700;font-family:monospace">${c.code}</td>
-      <td>${c.type==='percentage' ? c.value+'%' : fmt(c.value)}</td>
+      <td>${c.discount_type==='percentage' ? c.discount_value+'%' : fmt(c.discount_value)}</td>
       <td>${fmt(c.min_purchase)}</td>
-      <td>${c.used_count}/${c.max_uses||'∞'}</td>
-      <td><span style="color:${c.active?'var(--success)':'var(--danger)'}">${c.active?'Activo':'Inactivo'}</span></td>
+      <td>${c.used_count}/${c.usage_limit||'∞'}</td>
+      <td>${c.expires_at?new Date(c.expires_at).toLocaleDateString():'—'}</td>
+      <td><span style="color:${c.is_active?'var(--success)':'var(--danger)'}">${c.is_active?'Activo':'Inactivo'}</span></td>
       <td>
-        <button class="btn btn-sm ${c.active?'btn-warning':'btn-success'}" onclick="toggleCoupon(${c.id})">${c.active?'Desactivar':'Activar'}</button>
+        <button class="btn btn-sm ${c.is_active?'btn-warning':'btn-success'}" onclick="toggleCoupon(${c.id})">${c.is_active?'Desactivar':'Activar'}</button>
         <button class="btn btn-sm btn-danger" onclick="deleteCoupon(${c.id})"><i class="fas fa-trash"></i></button>
       </td>
     </tr>`).join('');
@@ -310,10 +331,10 @@ async function createCoupon(e) {
   e.preventDefault();
   const data = {
     code: $('#coupon-code').value,
-    type: $('#coupon-type').value,
-    value: parseFloat($('#coupon-value').value),
+    discount_type: $('#coupon-type').value,
+    discount_value: parseFloat($('#coupon-value').value) || 0,
     min_purchase: parseFloat($('#coupon-min').value) || 0,
-    max_uses: parseInt($('#coupon-uses').value) || 0,
+    usage_limit: parseInt($('#coupon-uses').value) || 0,
     expires_at: $('#coupon-expires').value || null,
   };
   try { await api.createCoupon(data, state.token); showToast('Cupón creado'); loadCoupons(); e.target.reset(); }
@@ -328,6 +349,36 @@ async function toggleCoupon(id) {
 async function deleteCoupon(id) {
   if (!confirm('¿Eliminar cupón?')) return;
   try { await api.deleteCoupon(id, state.token); showToast('Cupón eliminado'); loadCoupons(); }
+  catch (err) { showToast(err.message); }
+}
+
+// ===== REVIEWS =====
+function reviewStars(n) {
+  return '<span style="color:#e6b91e">' + Array.from({ length: 5 }, (_, i) => `<i class="fas fa-star${i < n ? '' : '-o'}"></i>`).join('') + '</span>';
+}
+
+async function loadAdminReviews() {
+  try {
+    const reviews = await api.adminGetReviews(state.token);
+    const tbody = $('#reviews-table tbody');
+    if (!reviews.length) { tbody.innerHTML = '<tr><td colspan="8" style="color:var(--text2)">Sin reseñas</td></tr>'; return; }
+    tbody.innerHTML = reviews.map(r => `<tr>
+      <td>${escapeHtml(r.user_name)}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.product_name)}</td>
+      <td>${reviewStars(r.rating)}</td>
+      <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.comment || r.title || '—')}</td>
+      <td>${r.is_reported ? '<span style="color:var(--danger)"><i class="fas fa-flag"></i> Sí</span>' : '—'}</td>
+      <td><span style="color:${r.is_approved?'var(--success)':'var(--danger)'}">${r.is_approved?'Aprobada':'Oculta'}</span></td>
+      <td>${r.created_at ? new Date(r.created_at).toLocaleDateString() : '—'}</td>
+      <td>
+        <button class="btn btn-sm ${r.is_approved?'btn-warning':'btn-success'}" onclick="toggleAdminReview(${r.id})">${r.is_approved?'Ocultar':'Aprobar'}</button>
+      </td>
+    </tr>`).join('');
+  } catch (err) { console.error(err); }
+}
+
+async function toggleAdminReview(id) {
+  try { await api.adminToggleReview(id, state.token); loadAdminReviews(); showToast('Estado actualizado'); }
   catch (err) { showToast(err.message); }
 }
 
@@ -398,6 +449,234 @@ async function deleteFAQ(id) {
   if (!confirm('¿Eliminar FAQ?')) return;
   try { await api.deleteFAQ(id, state.token); showToast('FAQ eliminada'); loadFAQs(); }
   catch (err) { showToast(err.message); }
+}
+
+// ===== CUSTOMERS =====
+async function loadCustomers() {
+  try {
+    const users = await api.getCustomers(state.token);
+    const tbody = $('#customers-table tbody');
+    if (!users.length) { tbody.innerHTML = '<tr><td colspan="9" style="color:var(--text2)">Sin clientes</td></tr>'; return; }
+    tbody.innerHTML = users.map(u => `
+      <tr style="${u.is_active ? '' : 'opacity:.5'}">
+        <td>${u.id}</td>
+        <td>${escapeHtml(u.name || '—')}</td>
+        <td>${escapeHtml(u.email)}</td>
+        <td>${escapeHtml(u.phone || '—')}</td>
+        <td>${u.total_orders ?? 0}</td>
+        <td>${fmt(u.total_spent || 0)}</td>
+        <td>${u.last_order_date ? new Date(u.last_order_date).toLocaleDateString() : '—'}</td>
+        <td><span style="color:${u.is_active?'var(--success)':'var(--danger)'}">${u.is_active?'Activo':'Bloqueado'}</span></td>
+        <td>
+          <button class="btn btn-sm ${u.is_active?'btn-danger':'btn-success'}" onclick="toggleCustomerBlock(${u.id})">${u.is_active?'Bloquear':'Desbloquear'}</button>
+        </td>
+      </tr>`).join('');
+  } catch (err) { console.error(err); }
+}
+
+async function toggleCustomerBlock(id) {
+  try {
+    const res = await api.toggleCustomerBlock(id, state.token);
+    showToast(res.is_active ? 'Usuario desbloqueado' : 'Usuario bloqueado');
+    loadCustomers();
+  } catch (err) { showToast(err.message); }
+}
+
+// ===== CATEGORIES =====
+async function loadCategories() {
+  try {
+    const cats = await api.getAdminCategories(state.token);
+    const tbody = $('#categories-table tbody');
+    if (!cats.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text2)">Sin categorías</td></tr>'; return; }
+    tbody.innerHTML = cats.map(c => `<tr>
+      <td>${c.name}</td><td>${c.slug || '—'}</td><td>${c.product_count ?? 0}</td><td>${c.sort_order ?? 0}</td>
+      <td><span style="color:${c.is_active?'var(--success)':'var(--danger)'}">${c.is_active?'Activa':'Inactiva'}</span></td>
+      <td>
+        <button class="btn btn-sm btn-warning" onclick="editCategory(${c.id})"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-danger" onclick="deleteCategory(${c.id})"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`).join('');
+  } catch (err) { console.error(err); }
+}
+
+function openCategoryForm() {
+  $('#category-form-element').reset();
+  $('#category-form-id').value = '';
+  $('#category-modal-title').textContent = 'Nueva Categoría';
+  $('#category-modal').classList.add('open');
+}
+
+function closeCategoryForm() { $('#category-modal').classList.remove('open'); }
+
+async function editCategory(id) {
+  try {
+    const cats = await api.getAdminCategories(state.token);
+    const c = cats.find(x => x.id === id);
+    if (!c) return;
+    $('#category-form-id').value = c.id;
+    $('#category-name').value = c.name;
+    $('#category-slug').value = c.slug || '';
+    $('#category-description').value = c.description || '';
+    $('#category-image').value = c.image || '';
+    $('#category-sort').value = c.sort_order ?? 0;
+    $('#category-active').value = c.is_active ? 'true' : 'false';
+    $('#category-modal-title').textContent = 'Editar Categoría';
+    $('#category-modal').classList.add('open');
+  } catch (err) { showToast(err.message); }
+}
+
+async function saveCategory(e) {
+  e.preventDefault();
+  const id = $('#category-form-id').value;
+  const data = {
+    name: $('#category-name').value,
+    slug: $('#category-slug').value,
+    description: $('#category-description').value,
+    image: $('#category-image').value,
+    sort_order: parseInt($('#category-sort').value) || 0,
+    is_active: $('#category-active').value === 'true',
+  };
+  try {
+    if (id) { await api.updateCategory(parseInt(id), data, state.token); }
+    else { await api.createCategory(data, state.token); }
+    showToast('Categoría guardada'); closeCategoryForm(); loadCategories();
+  } catch (err) { showToast(err.message); }
+}
+
+async function deleteCategory(id) {
+  if (!confirm('¿Eliminar categoría?')) return;
+  try { await api.deleteCategory(id, state.token); showToast('Categoría eliminada'); loadCategories(); }
+  catch (err) { showToast(err.message); }
+}
+
+// ===== COLLECTIONS =====
+async function loadCollections() {
+  try {
+    const cols = await api.getAdminCollections(state.token);
+    const tbody = $('#collections-table tbody');
+    if (!cols.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text2)">Sin colecciones</td></tr>'; return; }
+    tbody.innerHTML = cols.map(c => `<tr>
+      <td>${c.name}</td><td>${c.slug || '—'}</td><td>${c.product_count ?? 0}</td>
+      <td>${c.is_featured ? '★' : '—'}</td>
+      <td><span style="color:${c.is_active?'var(--success)':'var(--danger)'}">${c.is_active?'Activa':'Inactiva'}</span></td>
+      <td>
+        <button class="btn btn-sm btn-warning" onclick="editCollection(${c.id})"><i class="fas fa-edit"></i></button>
+        <button class="btn btn-sm btn-danger" onclick="deleteCollection(${c.id})"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`).join('');
+  } catch (err) { console.error(err); }
+}
+
+function openCollectionForm() {
+  $('#collection-form-element').reset();
+  $('#collection-form-id').value = '';
+  $('#collection-modal-title').textContent = 'Nueva Colección';
+  $('#collection-modal').classList.add('open');
+}
+
+function closeCollectionForm() { $('#collection-modal').classList.remove('open'); }
+
+async function editCollection(id) {
+  try {
+    const cols = await api.getAdminCollections(state.token);
+    const c = cols.find(x => x.id === id);
+    if (!c) return;
+    $('#collection-form-id').value = c.id;
+    $('#collection-name').value = c.name;
+    $('#collection-slug').value = c.slug || '';
+    $('#collection-description').value = c.description || '';
+    $('#collection-image').value = c.image || '';
+    $('#collection-featured').value = c.is_featured ? 'true' : 'false';
+    $('#collection-active').value = c.is_active ? 'true' : 'false';
+    $('#collection-modal-title').textContent = 'Editar Colección';
+    $('#collection-modal').classList.add('open');
+  } catch (err) { showToast(err.message); }
+}
+
+async function saveCollection(e) {
+  e.preventDefault();
+  const id = $('#collection-form-id').value;
+  const data = {
+    name: $('#collection-name').value,
+    slug: $('#collection-slug').value,
+    description: $('#collection-description').value,
+    image: $('#collection-image').value,
+    is_featured: $('#collection-featured').value === 'true',
+    is_active: $('#collection-active').value === 'true',
+  };
+  try {
+    if (id) { await api.updateCollection(parseInt(id), data, state.token); }
+    else { await api.createCollection(data, state.token); }
+    showToast('Colección guardada'); closeCollectionForm(); loadCollections();
+  } catch (err) { showToast(err.message); }
+}
+
+async function deleteCollection(id) {
+  if (!confirm('¿Eliminar colección?')) return;
+  try { await api.deleteCollection(id, state.token); showToast('Colección eliminada'); loadCollections(); }
+  catch (err) { showToast(err.message); }
+}
+
+// ===== BANNERS =====
+async function loadBanners() {
+  try {
+    const banners = await api.getAdminBanners(state.token);
+    const tbody = $('#banners-table tbody');
+    if (!banners.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text2)">Sin banners</td></tr>'; return; }
+    tbody.innerHTML = banners.map(b => `<tr>
+      <td><img src="${b.image_url||b.image||''}" style="width:80px;height:40px;object-fit:cover;border-radius:4px"></td>
+      <td>${b.title || '—'}</td><td>${b.subtitle || '—'}</td><td>${b.sort_order ?? 0}</td>
+      <td><span style="color:${b.is_active?'var(--success)':'var(--danger)'}">${b.is_active?'Activo':'Inactivo'}</span></td>
+      <td><button class="btn btn-sm btn-danger" onclick="deleteBanner(${b.id})"><i class="fas fa-trash"></i></button></td>
+    </tr>`).join('');
+  } catch (err) { console.error(err); }
+}
+
+function openBannerForm() {
+  $('#banner-form-element').reset();
+  $('#banner-form-id').value = '';
+  $('#banner-modal-title').textContent = 'Nuevo Banner';
+  $('#banner-modal').classList.add('open');
+}
+
+function closeBannerForm() { $('#banner-modal').classList.remove('open'); }
+
+async function saveBanner(e) {
+  e.preventDefault();
+  const id = $('#banner-form-id').value;
+  const data = {
+    title: $('#banner-title').value,
+    subtitle: $('#banner-subtitle').value,
+    image_url: $('#banner-image').value,
+    sort_order: parseInt($('#banner-sort').value) || 0,
+    is_active: $('#banner-active').value === 'true',
+  };
+  try {
+    if (id) { await api.updateBanner?.(parseInt(id), data, state.token); }
+    else { await api.createBanner(data, state.token); }
+    showToast('Banner guardado'); closeBannerForm(); loadBanners();
+  } catch (err) { showToast(err.message); }
+}
+
+async function deleteBanner(id) {
+  if (!confirm('¿Eliminar banner?')) return;
+  try { await api.deleteBanner(id, state.token); showToast('Banner eliminado'); loadBanners(); }
+  catch (err) { showToast(err.message); }
+}
+
+// ===== NOTIFICATIONS =====
+async function sendNotification(e) {
+  e.preventDefault();
+  const data = {
+    type: $('#notif-type').value,
+    title: $('#notif-title').value,
+    body: $('#notif-body').value,
+  };
+  try {
+    const res = await api.sendNotification(data, state.token);
+    showToast(res.sent ? `Notificación enviada a ${res.sent} cliente(s)` : 'Notificación enviada');
+    $('#notif-form').reset();
+  } catch (err) { showToast(err.message); }
 }
 
 // ===== LIVE CHAT =====
@@ -509,7 +788,7 @@ async function loadAdminChatMessages(convId) {
       const isAdmin = m.is_admin;
       return `<div style="display:flex;${isAdmin ? 'justify-content:flex-end' : 'justify-content:flex-start'};margin-bottom:12px">
         <div style="max-width:75%;${isAdmin ? 'background:var(--gold);color:#fff' : 'background:#fff;border:1px solid var(--gray-mid)'};padding:10px 14px;border-radius:12px;${isAdmin ? 'border-bottom-right-radius:4px' : 'border-bottom-left-radius:4px'}">
-          <div style="font-size:.65rem;font-weight:600;margin-bottom:2px;${isAdmin ? 'opacity:.7;text-align:right' : 'color:var(--gray)'}">${isAdmin ? 'Tú' : (m.sender_name || 'Cliente')}</div>
+          <div style="font-size:.65rem;font-weight:600;margin-bottom:2px;${isAdmin ? 'opacity:.7;text-align:right' : 'color:var(--gray)'}">${isAdmin ? 'Tú' : escapeHtml(m.sender_name || 'Cliente')}</div>
           <div style="font-size:.82rem">${escapeHtml(m.message)}</div>
           <div style="font-size:.6rem;${isAdmin ? 'opacity:.5;text-align:right' : 'color:var(--gray)'};margin-top:4px">${m.created_at ? new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : ''}</div>
         </div>
@@ -600,9 +879,19 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#product-cancel-btn').addEventListener('click', closeProductForm);
   $('#product-modal').addEventListener('click', e => { if (e.target === $('#product-modal')) closeProductForm(); });
   $('#coupon-form').addEventListener('submit', createCoupon);
+  $('#notif-form').addEventListener('submit', sendNotification);
   $('#faq-form-element').addEventListener('submit', saveFAQ);
   $('#faq-cancel-btn').addEventListener('click', closeFAQForm);
   $('#faq-modal').addEventListener('click', e => { if (e.target === $('#faq-modal')) closeFAQForm(); });
+  $('#category-form-element').addEventListener('submit', saveCategory);
+  $('#category-cancel-btn').addEventListener('click', closeCategoryForm);
+  $('#category-modal').addEventListener('click', e => { if (e.target === $('#category-modal')) closeCategoryForm(); });
+  $('#collection-form-element').addEventListener('submit', saveCollection);
+  $('#collection-cancel-btn').addEventListener('click', closeCollectionForm);
+  $('#collection-modal').addEventListener('click', e => { if (e.target === $('#collection-modal')) closeCollectionForm(); });
+  $('#banner-form-element').addEventListener('submit', saveBanner);
+  $('#banner-cancel-btn').addEventListener('click', closeBannerForm);
+  $('#banner-modal').addEventListener('click', e => { if (e.target === $('#banner-modal')) closeBannerForm(); });
   $('#image-upload-input').addEventListener('change', uploadImage);
   $('#main-image-upload-input').addEventListener('change', uploadMainImage);
   $('#add-variant-btn').addEventListener('click', () => addVariantRow());
@@ -618,8 +907,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (page === 'orders') { loadAdminOrders(); }
       if (page === 'chat') { loadAdminChatConversations(); }
       if (page === 'messages') { loadAdminMessages(); }
+      if (page === 'customers') { loadCustomers(); }
+      if (page === 'catalog') { loadCategories(); loadCollections(); loadBanners(); }
       if (page === 'marketing') { loadCoupons(); }
       if (page === 'faqs') { loadFAQs(); }
+      if (page === 'reviews') { loadAdminReviews(); }
       if (page === 'analytics') { loadSalesChart(); loadTopProducts(); }
     });
   });

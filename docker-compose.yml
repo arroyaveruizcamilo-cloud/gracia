@@ -16,7 +16,8 @@ services:
       - "5000:5000"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/gracia_clothing
-      SECRET_KEY: gracia-clothing-secure-key-2026-cambio
+      SECRET_KEY: ${JWT_SECRET:?Debes configurar JWT_SECRET en tu .env}
+      ENVIRONMENT: production
     depends_on:
       - db
 

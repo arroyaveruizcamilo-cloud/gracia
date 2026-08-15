@@ -9,7 +9,14 @@ import os
 from database import get_db
 from models import User
 
-SECRET_KEY = os.getenv("JWT_SECRET", os.getenv("SECRET_KEY", "gracia-clothing-secure-key-2026-cambio"))
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
+SECRET_KEY = os.getenv("JWT_SECRET", os.getenv("SECRET_KEY", ""))
+if not SECRET_KEY:
+    if ENVIRONMENT == "production":
+        raise RuntimeError("JWT_SECRET no está configurado. Generá uno con: python -c \"import secrets; print(secrets.token_urlsafe(64))\"")
+    SECRET_KEY = "dev-insecure-secret-change-me"
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_HOURS = 24
 
@@ -47,6 +54,8 @@ def get_current_user(
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise HTTPException(status_code=401, detail="Usuario no encontrado")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Tu cuenta está bloqueada")
     return user
 
 
@@ -64,7 +73,10 @@ def get_optional_user(
             return None
     except JWTError:
         return None
-    return db.query(User).filter(User.id == user_id).first()
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None or not user.is_active:
+        return None
+    return user
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:

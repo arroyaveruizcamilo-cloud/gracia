@@ -5,21 +5,71 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gracia Clothing — Moda Femenina Colombiana</title>
 <meta name="description" content="Descubre la nueva coleccion 2026 de Gracia Clothing. Moda femenina colombiana con estilo, elegancia y calidad. Envios a todo Colombia.">
+<link rel="canonical" href="https://graciaclothing.com/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link rel="stylesheet" href="/frontend/css/styles.css">
 <link rel="manifest" href="/frontend/manifest.json">
 <meta name="theme-color" content="#111111">
+<meta property="og:site_name" content="Gracia Clothing">
 <meta property="og:title" content="Gracia Clothing — Moda Femenina Colombiana">
 <meta property="og:description" content="Descubre la nueva colección 2026 de Gracia Clothing.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://graciaclothing.com">
-<meta name="keywords" content="moda colombiana, ropa femenina, coleccion 2026, gracia clothing">
+<meta property="og:url" content="https://graciaclothing.com/">
+<meta property="og:image" content="https://graciaclothing.com/frontend/assets/logo.svg">
+<meta property="og:locale" content="es_CO">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Gracia Clothing — Moda Femenina Colombiana">
+<meta name="twitter:description" content="Moda femenina colombiana con estilo, elegancia y calidad. Envíos a todo Colombia.">
+<meta name="twitter:image" content="https://graciaclothing.com/frontend/assets/logo.svg">
+<meta name="keywords" content="moda colombiana, ropa femenina, coleccion 2026, gracia clothing, ropa en bogota">
 <link rel="icon" type="image/svg+xml" href="/frontend/favicon.svg">
 <link rel="apple-touch-icon" href="/frontend/icons/icon-192.png">
-<script defer src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-<script defer>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-XXXXXXXXXX');</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "OnlineStore",
+  "name": "Gracia Clothing",
+  "url": "https://graciaclothing.com/",
+  "description": "Moda femenina colombiana. Colección 2026 de vestidos, blusas, corsets y más.",
+  "image": "https://graciaclothing.com/frontend/assets/logo.svg",
+  "address": { "@type": "PostalAddress", "addressCountry": "CO" }
+}
+</script>
+<script>
+window.GRACIA_CONFIG = { GA_ID: '', META_PIXEL_ID: '' };
+(async function () {
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    window.GRACIA_CONFIG = cfg || window.GRACIA_CONFIG;
+    if (cfg && cfg.GA_ID && cfg.GA_ID.startsWith('G-')) {
+      const s = document.createElement('script');
+      s.defer = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + cfg.GA_ID;
+      s.onload = () => {
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date()); gtag('config', cfg.GA_ID);
+      };
+      document.head.appendChild(s);
+    }
+    if (cfg && cfg.META_PIXEL_ID && cfg.META_PIXEL_ID.length === 15) {
+      !function (f, b, e, v, n, t, s) {
+        if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments) };
+        if (!f._fbq) f._fbq = n; n.push = n; n.loaded = true; n.version = '2.0';
+        n.queue = []; t = b.createElement(e); t.async = true; t.src = v;
+        s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
+      }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', cfg.META_PIXEL_ID); fbq('track', 'PageView');
+    }
+  } catch (e) {}
+})();
+</script>
+<script>
+window.dataLayer = window.dataLayer || [];
+function gtag() { dataLayer.push(arguments); }
+</script>
 <style>
 .topbar{background:var(--text);color:#fff;text-align:center;padding:.55rem 1rem;font-size:.56rem;letter-spacing:3px;text-transform:uppercase;font-weight:400}
 .topbar span{color:var(--gold);font-weight:500}
@@ -59,6 +109,16 @@
         <button class="hbtn" onclick="logoutUser()" aria-label="Salir">
           <i class="fa-regular fa-right-from-bracket"></i>
         </button>
+      </span>
+      <span id="notif-bell-wrap" style="display:none;position:relative">
+        <button class="hbtn" onclick="toggleNotifications()" aria-label="Notificaciones">
+          <i class="fa-regular fa-bell"></i>
+          <span id="notif-badge" style="display:none;position:absolute;top:2px;right:-2px;background:var(--gold);color:#fff;border-radius:50%;min-width:16px;height:16px;font-size:.6rem;line-height:16px;text-align:center"></span>
+        </button>
+        <div id="notif-panel" style="display:none;position:absolute;top:calc(100% + 10px);right:0;width:320px;max-height:380px;overflow-y:auto;background:var(--bg, #fff);border:1px solid var(--border);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.15);z-index:1000">
+          <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-weight:600;font-size:.85rem">Notificaciones</div>
+          <div id="notif-list"></div>
+        </div>
       </span>
       <button id="cart-btn" aria-label="Carrito">
         <i class="fa-regular fa-bag-shopping"></i>
@@ -141,6 +201,26 @@
   </div>
 </div>
 
+<!-- ===== ORDER TRACKING (invitados) ===== -->
+<div id="page-track" class="page section" style="padding-top:120px;min-height:60vh">
+  <div style="max-width:520px;margin:0 auto;text-align:center">
+    <h2 class="section-title reveal">Seguimiento de Pedido</h2>
+    <p class="section-subtitle reveal">Ingresa tu número de pedido y el email con el que compraste</p>
+    <form id="track-form" style="display:grid;gap:12px;margin-top:24px;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px">
+      <div class="form-group">
+        <label>Número de pedido</label>
+        <input type="text" id="track-id" placeholder="Ej: 12" required>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="track-email" placeholder="tu@email.com" required>
+      </div>
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center"><i class="fa-regular fa-magnifying-glass"></i> Consultar pedido</button>
+    </form>
+    <div id="track-result" style="margin-top:24px;text-align:left"></div>
+  </div>
+</div>
+
 <!-- ===== PRODUCT DETAIL PAGE ===== -->
 <div id="page-product" class="page section" style="padding-top:120px;">
   <div class="container" id="product-detail-container">
@@ -149,6 +229,7 @@
       <div id="pd-image" style="position:sticky;top:140px"></div>
       <div id="pd-info"></div>
     </div>
+    <div id="pd-reviews" style="margin-top:64px"></div>
   </div>
 </div>
 
@@ -388,7 +469,8 @@
     </div>
     <div>
       <h4>Ayuda</h4>
-      <a href="#">Preguntas frecuentes</a>
+      <a href="#" onclick="event.preventDefault();showPage('track');return false">Seguimiento de pedido</a>
+      <a href="#" onclick="event.preventDefault();showPage('store');return false">Preguntas frecuentes</a>
       <a href="#">Politica de envios</a>
       <a href="#">Devoluciones</a>
     </div>
@@ -523,6 +605,7 @@
       <div class="form-group"><label>Email</label><input type="email" id="loginEmail" required></div>
       <div class="form-group"><label>Contrasena</label><div class="pwd-wrap"><input type="password" id="loginPass" required><button type="button" class="pwd-toggle" onclick="const i=this.previousElementSibling;i.type=i.type==='password'?'text':'password';this.classList.toggle('show')"><i class="fa-regular fa-eye"></i></button></div></div>
       <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">Ingresar</button>
+      <p style="text-align:center;margin-top:12px;font-size:.8rem;color:var(--text2)"><a href="#" onclick="switchAuth('forgot');return false" style="color:var(--gold)">¿Olvidaste tu contraseña?</a></p>
     </form>
     <form class="auth-form" id="registerForm">
       <div class="form-group"><label>Nombre</label><input type="text" id="regName" required></div>
@@ -530,7 +613,28 @@
       <div class="form-group"><label>Telefono</label><input type="tel" id="regPhone"></div>
       <div class="form-group"><label>Contrasena</label><div class="pwd-wrap"><input type="password" id="regPass" required><button type="button" class="pwd-toggle" onclick="const i=this.previousElementSibling;i.type=i.type==='password'?'text':'password';this.classList.toggle('show')"><i class="fa-regular fa-eye"></i></button></div></div>
       <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">Crear Cuenta</button>
+      <p style="text-align:center;margin-top:12px;font-size:.8rem;color:var(--text2)"><a href="#" onclick="switchAuth('login');return false" style="color:var(--gold)">&larr; Volver a ingresar</a></p>
     </form>
+    <form class="auth-form" id="forgotForm">
+      <p style="font-size:.85rem;color:var(--text2);margin-bottom:12px">Ingresá tu email y te enviaremos un enlace para restablecer tu contraseña.</p>
+      <div class="form-group"><label>Email</label><input type="email" id="forgotEmail" required></div>
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">Enviar enlace</button>
+      <p style="text-align:center;margin-top:12px;font-size:.8rem;color:var(--text2)"><a href="#" onclick="switchAuth('login');return false" style="color:var(--gold)">&larr; Volver a ingresar</a></p>
+    </form>
+    <form class="auth-form" id="resetForm">
+      <p style="font-size:.85rem;color:var(--text2);margin-bottom:12px">Ingresá tu nueva contraseña.</p>
+      <div class="form-group"><label>Nueva contraseña</label><div class="pwd-wrap"><input type="password" id="resetPass" minlength="8" required><button type="button" class="pwd-toggle" onclick="const i=this.previousElementSibling;i.type=i.type==='password'?'text':'password';this.classList.toggle('show')"><i class="fa-regular fa-eye"></i></button></div></div>
+      <button type="submit" class="btn btn-gold" style="width:100%;justify-content:center">Cambiar contraseña</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== RECIBO DE PAGO ===== -->
+<div class="modal-overlay" id="receipt-modal">
+  <div class="modal" style="max-width:560px">
+    <button class="close-modal" onclick="closeModal('receipt-modal')">&times;</button>
+    <h2 style="font-family:var(--font-d);text-align:center">Recibo de Pago</h2>
+    <div id="receipt-content" style="font-size:.85rem"></div>
   </div>
 </div>
 
@@ -544,9 +648,54 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 function openAuth() { document.getElementById('authModal').classList.add('open'); }
 
 function switchAuth(tab) {
-  document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.textContent.includes(tab === 'login' ? 'Ingresar' : 'Registrarse')));
-  document.querySelectorAll('.auth-form').forEach(f => f.classList.toggle('active', (tab === 'login' && f.id === 'loginForm') || (tab === 'register' && f.id === 'registerForm')));
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', (tab === 'login' && t.textContent.includes('Ingresar')) || (tab === 'register' && t.textContent.includes('Registrarse'))));
+  document.querySelectorAll('.auth-form').forEach(f => f.classList.toggle('active', f.id === tab + 'Form'));
 }
+
+document.getElementById('forgotForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  btn.disabled = true; btn.textContent = 'Enviando...';
+  try {
+    const r = await api.forgotPassword(document.getElementById('forgotEmail').value);
+    showToast(r.message || 'Revisá tu email');
+    switchAuth('login');
+    e.target.reset();
+  } catch (err) { showToast(err.message); }
+  btn.disabled = false; btn.textContent = 'Enviar enlace';
+});
+
+let _resetToken = null;
+document.getElementById('resetForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const r = await api.resetPassword(_resetToken, document.getElementById('resetPass').value);
+    showToast(r.message || 'Contraseña actualizada');
+    closeModal('authModal');
+    window.history.replaceState({}, '', '/');
+    e.target.reset();
+    switchAuth('login');
+  } catch (err) { showToast(err.message); }
+  btn.disabled = false; btn.textContent = 'Cambiar contraseña';
+});
+
+// Auto-abrir reset de contraseña si venimos del link del email
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (token) {
+    _resetToken = token;
+    const url = new URL(window.location);
+    url.searchParams.delete('token');
+    window.history.replaceState({}, '', url);
+    document.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('authModal').classList.add('open');
+      switchAuth('reset');
+    });
+  }
+})();
 
 document.getElementById('loginForm').addEventListener('submit', async function(e) {
   e.preventDefault();

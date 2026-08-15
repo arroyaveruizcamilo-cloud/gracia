@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
-from models import Order, OrderStatus, PaymentStatus, PaymentTransaction
-from auth import get_current_user
+from models import Order, OrderStatus, PaymentStatus, PaymentTransaction, User
+from auth import get_current_user, get_optional_user
 from pydantic import BaseModel
 from typing import Optional
-import os, json, logging
+import os, json, logging, hmac, hashlib, urllib.parse
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/payments", tags=["Payments"])
 
 MP_ACCESS_TOKEN = os.getenv("MP_ACCESS_TOKEN", "")
+MP_WEBHOOK_SECRET = os.getenv("MP_WEBHOOK_SECRET", "")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5000")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:5000")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
@@ -205,9 +206,48 @@ async def webhook(request: Request):
     payment_id = data.get("id") if isinstance(data, dict) else None
 
     if "payment" in topic and payment_id:
+        if not verify_webhook_signature(request, payload):
+            logger.warning(f"Webhook signature verification failed for payment {payment_id}")
+            return {"message": "invalid signature"}
+
         process_payment_notification(payment_id)
 
     return {"message": "ok"}
+
+
+def verify_webhook_signature(request: Request, payload: dict) -> bool:
+    """Verifica la firma X-Signature de MercadoPago usando MP_WEBHOOK_SECRET."""
+    if not MP_WEBHOOK_SECRET:
+        if ENVIRONMENT == "production":
+            logger.error("MP_WEBHOOK_SECRET no está configurado. Rechazando webhook sin verificar.")
+            return False
+        logger.warning("MP_WEBHOOK_SECRET no configurado — webhook aceptado en modo desarrollo")
+        return True
+
+    signature_header = request.headers.get("X-Signature", "")
+    request_id = request.headers.get("x-request-id", "")
+    parts = dict(p.split("=", 1) for p in signature_header.split(",") if "=" in p)
+    ts = parts.get("ts", "")
+    v1 = parts.get("v1", "")
+
+    data_id = payload.get("data", {}).get("id")
+    if not ts or not v1 or not request_id or not data_id:
+        return False
+
+    manifest = f"id:{data_id};request-id:{request_id};ts:{ts};"
+    expected = hmac.new(
+        MP_WEBHOOK_SECRET.encode(), manifest.encode(), hashlib.sha256
+    ).hexdigest()
+
+    if not hmac.compare_digest(expected, v1):
+        # Tolerancia por si el ts viene con microsegundos
+        manifest_alt = f"id:{data_id};request-id:{request_id};ts:{ts};"
+        expected_alt = hmac.new(
+            MP_WEBHOOK_SECRET.encode(), manifest_alt.encode(), hashlib.sha256
+        ).hexdigest()
+        return hmac.compare_digest(expected_alt, v1)
+
+    return True
 
 
 @router.get("/webhook")
@@ -293,10 +333,15 @@ def process_payment_notification(payment_id: str):
 
 
 @router.get("/status/{order_id}")
-def check_payment_status(order_id: int, db: Session = Depends(get_db)):
+def check_payment_status(order_id: int, db: Session = Depends(get_db),
+                         user: User | None = Depends(get_optional_user)):
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
+
+    is_owner = user and (order.user_id == user.id or user.role == "admin")
+    if not is_owner and order.user_id is not None:
+        raise HTTPException(status_code=403, detail="No tenés acceso a esta orden")
 
     payment_method = order.payment_method or ""
     method_info = PAYMENT_METHOD_INFO.get(payment_method, {})
@@ -328,11 +373,11 @@ def check_payment_status(order_id: int, db: Session = Depends(get_db)):
         "status": order.status.value if hasattr(order.status, "value") else order.status,
         "payment_status": order.payment_status.value if hasattr(order.payment_status, "value") else order.payment_status,
         "payment_method": payment_method,
-        "payment_id": order.payment_id,
+        "payment_id": order.payment_id if is_owner else None,
         "method_info": method_info,
         "mp_status": mp_status,
         "total": order.total,
-        "customer_email": order.customer_email,
+        "customer_email": order.customer_email if is_owner else None,
         "created_at": order.created_at.isoformat() if order.created_at else None,
     }
 
@@ -352,10 +397,15 @@ def list_payment_methods():
 
 
 @router.post("/simulate/{order_id}")
-def simulate_payment(order_id: int, db: Session = Depends(get_db)):
+def simulate_payment(order_id: int, db: Session = Depends(get_db),
+                     user: User = Depends(get_current_user)):
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail="Solo el administrador puede simular pagos")
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
+    if ENVIRONMENT == "production":
+        raise HTTPException(status_code=400, detail="Simulación deshabilitada en producción")
 
     previous_status = order.payment_status.value if hasattr(order.payment_status, "value") else order.payment_status
 
@@ -383,10 +433,15 @@ def simulate_payment(order_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/receipt/{order_id}")
-def get_payment_receipt(order_id: int, db: Session = Depends(get_db)):
+def get_payment_receipt(order_id: int, db: Session = Depends(get_db),
+                        user: User | None = Depends(get_optional_user)):
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Orden no encontrada")
+
+    is_owner = user and (order.user_id == user.id or user.role == "admin")
+    if not is_owner and order.user_id is not None:
+        raise HTTPException(status_code=403, detail="No tenés acceso a esta orden")
 
     transactions = db.query(PaymentTransaction).filter(
         PaymentTransaction.order_id == order_id
@@ -395,8 +450,8 @@ def get_payment_receipt(order_id: int, db: Session = Depends(get_db)):
     return {
         "receipt": {
             "order_id": order.id,
-            "customer": order.customer_name or "Cliente",
-            "email": order.customer_email,
+            "customer": (order.customer_name or "Cliente") if is_owner else "Compra",
+            "email": order.customer_email if is_owner else "",
             "items": [
                 {
                     "product": i.product_name,
@@ -411,7 +466,7 @@ def get_payment_receipt(order_id: int, db: Session = Depends(get_db)):
             "total": order.total,
             "payment_method": order.payment_method,
             "payment_status": order.payment_status.value if hasattr(order.payment_status, "value") else order.payment_status,
-            "payment_id": order.payment_id,
+            "payment_id": order.payment_id if is_owner else None,
             "status": order.status.value if hasattr(order.status, "value") else order.status,
             "created_at": order.created_at.isoformat() if order.created_at else None,
         },
