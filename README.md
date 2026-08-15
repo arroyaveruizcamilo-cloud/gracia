@@ -1,5 +1,5 @@
 # GRACIA — Atelier de Moda
-|istema completo de e-commerce para un atelier de moda con panel administrador, chat en tiempo real, carrito de compras, notificaciones y cambio de idioma.
+Sistema completo de e-commerce para un atelier de moda con panel administrador, chat en tiempo real, carrito de compras, notificaciones y cambio de idioma.
 
 ## Stack Tecnológico
 
@@ -90,16 +90,35 @@ docker run -p 5000:5000 gracia
 | **Tienda** | `http://localhost:5000` |
 | **Panel Admin** | `http://localhost:5000/admin` |
 | **API Docs** | `http://localhost:5000/docs` |
-| **Health Check** | `http://localhost:5000/api/health` |
+| **Health Check** | `http://localhost:5000/health` |
 
 ### Credenciales por defecto (solo desarrollo)
 
 | Rol | Email | Contraseña |
 |-----|-------|-----------|
-| **Admin** | `admin@gracia.moda` | `Admin123!` |
+| **Admin** | `arroyaveruizcamilo@gmail.com` | `camilo2006_RZ@` |
 | **Demo** | `demo@gracia.moda` | `Demo123!` |
 
-> ⚠️ **Importante**: Cambiá el email y contraseña del admin en producción usando las variables de entorno `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`.
+> ⚠️ **Importante**: En producción (Render) el app exige las variables de entorno `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`; si no están configuradas, no arranca.
+
+## Deploy en Render
+
+### Requisitos
+- Repositorio en GitHub con el `render.yaml` incluido.
+- Una base de datos PostgreSQL (el blueprint crea `gracia-db` automáticamente).
+
+### Pasos
+1. Crear un servicio en Render seleccionando **Blueprint** y tu repo de GitHub.
+2. Render crea la base de datos y el servicio web a partir de `render.yaml`.
+3. En el servicio web → **Environment**, agregar a mano (no se sincronizan desde el repo):
+   - `CORS_ORIGINS` — origen del frontend (ej. `https://tuapp.onrender.com`)
+   - `ALLOWED_HOSTS` — host permitido (ej. `tuapp.onrender.com`)
+   - `FRONTEND_URL` — URL del frontend
+   - `SEED_ADMIN_EMAIL` = `arroyaveruizcamilo@gmail.com`
+   - `SEED_ADMIN_PASSWORD` = `camilo2006_RZ@`
+4. Click en **Deploy**.
+
+> El Dockerfile instala las dependencias de `backend/requirements.txt`, expone el puerto `5000` y arranca con uvicorn. El health check usa `/health`.
 
 ## Tests
 
