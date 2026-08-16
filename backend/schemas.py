@@ -31,6 +31,22 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     user: UserOut
+    requires_2fa: bool = False
+
+
+class TwoFactorSetup(BaseModel):
+    secret: str
+    qr_url: str
+    backup_codes: list[str]
+
+
+class TwoFactorVerify(BaseModel):
+    code: str
+
+
+class TwoFactorLoginRequest(BaseModel):
+    temp_token: str
+    code: str
 
 
 # ===== ADDRESSES =====

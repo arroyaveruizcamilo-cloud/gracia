@@ -197,3 +197,9 @@ tr:hover td{background:rgba(201,168,76,.03)}
   .main-header h1{font-size:1rem}
   .stat-card{align-items:flex-start}
 }
+
+/* ===== SECURITY ===== */
+.login-box .btn:disabled{opacity:.6;cursor:not-allowed}
+.login-box .error-msg{border-left:3px solid var(--danger);text-align:left}
+#twofa-code{font-family:monospace;font-size:1.5rem;letter-spacing:8px;text-align:center;padding:14px}
+#twofa-code:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(201,168,76,.15)}

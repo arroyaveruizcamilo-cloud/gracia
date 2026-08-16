@@ -2,6 +2,8 @@ const state = {
   token: localStorage.getItem('token') || null,
   user: JSON.parse(localStorage.getItem('user') || 'null'),
   products: [], orders: [], messages: [],
+  tempToken: null,
+  pendingUser: null,
 };
 
 const $ = s => document.querySelector(s);
@@ -23,21 +25,96 @@ async function handleLogin(e) {
   const password = $('#login-password').value;
   const errEl = $('#login-error');
   errEl.style.display = 'none';
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Verificando...'; }
+
   try {
     const res = await api.login(email, password);
-    if (res.user.role !== 'admin') { errEl.textContent = 'Acceso denegado'; errEl.style.display = 'block'; return; }
+
+    if (res.requires_2fa) {
+      state.tempToken = res.access_token || null;
+      state.pendingUser = res.user;
+      $('#login-page').style.display = 'none';
+      $('#twofa-page').style.display = 'flex';
+      $('#twofa-code').focus();
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Iniciar Sesión'; }
+      return;
+    }
+
+    if (res.user.role !== 'admin') {
+      errEl.textContent = 'Acceso denegado: no tenés permisos de administrador';
+      errEl.style.display = 'block';
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Iniciar Sesión'; }
+      return;
+    }
+
     state.token = res.access_token; state.user = res.user;
     localStorage.setItem('token', res.access_token);
     localStorage.setItem('user', JSON.stringify(res.user));
     showAdmin();
-  } catch (err) { errEl.textContent = err.message; errEl.style.display = 'block'; }
+  } catch (err) {
+    let msg = err.message;
+    if (msg.includes('423') || msg.includes('bloqueada')) {
+      msg = 'Cuenta bloqueada temporalmente por demasiados intentos fallidos. Esperá unos minutos.';
+    } else if (msg.includes('429') || msg.includes('Demasiados')) {
+      msg = 'Demasiados intentos. Esperá un momento antes de intentar de nuevo.';
+    }
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Iniciar Sesión'; }
+  }
+}
+
+async function handle2faVerify(e) {
+  e.preventDefault();
+  const code = $('#twofa-code').value;
+  const errEl = $('#twofa-error');
+  errEl.style.display = 'none';
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Verificando...'; }
+
+  try {
+    const res = await api.verify2fa(state.tempToken, code);
+
+    state.token = res.access_token;
+    state.user = res.user;
+    state.tempToken = null;
+    localStorage.setItem('token', res.access_token);
+    localStorage.setItem('user', JSON.stringify(res.user));
+
+    $('#twofa-page').style.display = 'none';
+    showAdmin();
+  } catch (err) {
+    let msg = err.message;
+    if (msg.includes('expirado')) {
+      msg = 'El código expiró. Iniciá sesión de nuevo.';
+      setTimeout(() => { $('#twofa-page').style.display = 'none'; $('#login-page').style.display = 'flex'; }, 2000);
+    }
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Verificar'; }
+  }
+}
+
+function backToLogin() {
+  state.tempToken = null;
+  state.pendingUser = null;
+  $('#twofa-page').style.display = 'none';
+  $('#login-page').style.display = 'flex';
+  $('#twofa-code').value = '';
+  $('#twofa-error').style.display = 'none';
 }
 
 function logout() {
-  state.token = null; state.user = null;
+  state.token = null; state.user = null; state.tempToken = null; state.pendingUser = null;
   localStorage.removeItem('token'); localStorage.removeItem('user');
   $('#login-page').style.display = 'flex';
+  $('#twofa-page').style.display = 'none';
   $('#admin-app').style.display = 'none';
+  $('#login-error').style.display = 'none';
+  $('#twofa-error').style.display = 'none';
 }
 
 function showAdmin() {
@@ -875,6 +952,11 @@ function showToast(msg) {
 // ===== INIT =====
 document.addEventListener('DOMContentLoaded', () => {
   $('#login-form').addEventListener('submit', handleLogin);
+  $('#twofa-form').addEventListener('submit', handle2faVerify);
+  $('#twofa-back-btn').addEventListener('click', backToLogin);
+  $('#twofa-code').addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/[^0-9]/g, '');
+  });
   $('#product-form-element').addEventListener('submit', saveProduct);
   $('#product-cancel-btn').addEventListener('click', closeProductForm);
   $('#product-modal').addEventListener('click', e => { if (e.target === $('#product-modal')) closeProductForm(); });

@@ -15,6 +15,10 @@ const api = {
 
   // Auth
   login(email, pwd) { return this.request('POST', '/auth/login', { email, password: pwd }); },
+  verify2fa(tempToken, code) { return this.request('POST', '/auth/2fa/verify', { temp_token: tempToken, code }); },
+  setup2fa(token) { return this.request('POST', '/auth/2fa/setup', null, token); },
+  enable2fa(code, token) { return this.request('POST', '/auth/2fa/enable', { code }, token); },
+  disable2fa(code, token) { return this.request('POST', '/auth/2fa/disable', { code }, token); },
   register(name, email, pwd, phone) { return this.request('POST', '/auth/register', { name, email, password: pwd, phone }); },
   me(token) { return this.request('GET', '/auth/me', null, token); },
   forgotPassword(email) { return this.request('POST', '/auth/forgot-password', { email }); },

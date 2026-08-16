@@ -42,6 +42,11 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     email_verified = Column(Boolean, default=False)
     two_factor_enabled = Column(Boolean, default=False)
+    two_factor_secret = Column(String(64), default="")
+    failed_login_attempts = Column(Integer, default=0)
+    locked_until = Column(DateTime, nullable=True)
+    last_login_at = Column(DateTime, nullable=True)
+    last_login_ip = Column(String(50), default="")
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
     orders = relationship("Order", back_populates="user")

@@ -326,6 +326,20 @@ def _migrate_runtime():
                 with engine.begin() as conn2:
                     conn2.execute(text("ALTER TABLE orders ADD COLUMN stock_released BOOLEAN DEFAULT 0"))
 
+        if "users" in tables:
+            cols = {c["name"] for c in inspector.get_columns("users")}
+            new_user_cols = {
+                "two_factor_secret": "VARCHAR(64) DEFAULT ''",
+                "failed_login_attempts": "INTEGER DEFAULT 0",
+                "locked_until": "DATETIME",
+                "last_login_at": "DATETIME",
+                "last_login_ip": "VARCHAR(50) DEFAULT ''",
+            }
+            for col_name, col_def in new_user_cols.items():
+                if col_name not in cols:
+                    with engine.begin() as conn2:
+                        conn2.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
+
 
 fastapi_app.router.lifespan_context = lifespan
 

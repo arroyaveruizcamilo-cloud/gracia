@@ -8,10 +8,11 @@ from fastapi.responses import JSONResponse
 logger = logging.getLogger("gracia.ratelimit")
 
 LIMITS = {
-    "/api/auth/login": (int(os.getenv("RATE_LIMIT_LOGIN", "10")), 60),
-    "/api/auth/register": (int(os.getenv("RATE_LIMIT_REGISTER", "5")), 3600),
-    "/api/auth/forgot-password": (int(os.getenv("RATE_LIMIT_FORGOT", "5")), 3600),
-    "/api/auth/reset-password": (int(os.getenv("RATE_LIMIT_RESET", "10")), 3600),
+    "/api/auth/login": (int(os.getenv("RATE_LIMIT_LOGIN", "8")), 90),
+    "/api/auth/2fa/verify": (int(os.getenv("RATE_LIMIT_2FA", "5")), 300),
+    "/api/auth/register": (int(os.getenv("RATE_LIMIT_REGISTER", "3")), 3600),
+    "/api/auth/forgot-password": (int(os.getenv("RATE_LIMIT_FORGOT", "3")), 3600),
+    "/api/auth/reset-password": (int(os.getenv("RATE_LIMIT_RESET", "5")), 3600),
     "/api/messages": (int(os.getenv("RATE_LIMIT_MESSAGES", "5")), 3600),
 }
 
