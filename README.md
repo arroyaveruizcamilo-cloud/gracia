@@ -92,14 +92,15 @@ docker run -p 5000:5000 gracia
 | **API Docs** | `http://localhost:5000/docs` |
 | **Health Check** | `http://localhost:5000/health` |
 
-### Credenciales por defecto (solo desarrollo)
+### Credenciales (solo desarrollo)
 
-| Rol | Email | Contraseña |
-|-----|-------|-----------|
-| **Admin** | `arroyaveruizcamilo@gmail.com` | `camilo2006_RZ@` |
-| **Demo** | `demo@gracia.moda` | `Demo123!` |
+En desarrollo el admin se crea al arrancar desde las variables `SEED_ADMIN_EMAIL` y
+`SEED_ADMIN_PASSWORD`. **En producción no hay credenciales por defecto**: son obligatorias
+esas dos variables, y una vez creado el admin, los deploys siguientes **no** las sobrescriben
+(si cambiás la contraseña en el panel, se mantiene).
 
-> ⚠️ **Importante**: En producción (Render) el app exige las variables de entorno `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`; si no están configuradas, no arranca.
+> ⚠️ **Importante**: En producción (Render) el app exige `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`,
+> `JWT_SECRET`, `SMTP_USER` y `SMTP_PASS`; si faltan, no arranca (fail-fast a propósito).
 
 ## Deploy en Render
 
@@ -114,11 +115,37 @@ docker run -p 5000:5000 gracia
    - `CORS_ORIGINS` — origen del frontend (ej. `https://tuapp.onrender.com`)
    - `ALLOWED_HOSTS` — host permitido (ej. `tuapp.onrender.com`)
    - `FRONTEND_URL` — URL del frontend
-   - `SEED_ADMIN_EMAIL` = `arroyaveruizcamilo@gmail.com`
-   - `SEED_ADMIN_PASSWORD` = `camilo2006_RZ@`
-4. Click en **Deploy**.
+   - `JWT_SECRET` — valor seguro (generalo con `python -c "import secrets; print(secrets.token_urlsafe(64))"`)
+   - `SEED_ADMIN_EMAIL` — email del admin (solo primer arranque)
+   - `SEED_ADMIN_PASSWORD` — contraseña fuerte del admin (solo primer arranque)
+   - `SMTP_USER` / `SMTP_PASS` — credenciales SMTP para confirmaciones de pedido y reset de contraseña
+   - `MP_ACCESS_TOKEN` — access token de MercadoPago para cobrar de verdad
+   - `MP_WEBHOOK_SECRET` — secret del webhook de MercadoPago
+4. **Opcionales de producción:**
+   - `STORAGE_BACKEND=cloudinary` (o `s3`) + sus credenciales — sin esto las imágenes subidas
+     al panel se guardan en disco efímero y se pierden con cada deploy.
+   - `REDIS_URL` — rate limiting compartido entre workers/instancias.
+   - `SENTRY_DSN` — monitoreo de errores.
+5. Click en **Deploy**.
 
-> El Dockerfile instala las dependencias de `backend/requirements.txt`, expone el puerto `5000` y arranca con uvicorn. El health check usa `/health`.
+> El Dockerfile instala las dependencias de `backend/requirements.txt`, expone el puerto `5000`
+> y arranca con `scripts/entrypoint.sh` (migraciones Alembic en base nueva + uvicorn).
+> El health check usa `/health`.
+
+> 🔐 **Seguridad**: nunca commitees `.env`. Las variables reales van solo en el panel de Render.
+> Si en algún commit anterior quedaron credenciales reales (p. ej. en README), **rotalas**.
+
+### Producción — Checklist
+
+- [ ] `JWT_SECRET` generado y seguro (≥ 32 caracteres)
+- [ ] `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` configurados (solo primer arranque)
+- [ ] `SMTP_USER` / `SMTP_PASS` configurados (el app no arranca en producción sin ellos)
+- [ ] `MP_ACCESS_TOKEN` de producción (no el de pruebas) + `MP_WEBHOOK_SECRET`
+- [ ] `STORAGE_BACKEND=cloudinary` (o `s3`) con sus credenciales
+- [ ] `REDIS_URL` configurado para rate limiting persistente
+- [ ] Backup diario de PostgreSQL (`scripts/backup_db.sh` + cron/bucket)
+- [ ] Dominio propio con HTTPS (Render provee certificados automáticamente)
+- [ ] Credenciales por defecto rotadas y fuera del repo
 
 ## Tests
 
@@ -142,6 +169,10 @@ graciacloting/
 │   ├── models.py             # Modelos ORM
 │   ├── schemas.py            # Schemas Pydantic
 │   ├── auth.py               # Autenticación JWT + bcrypt
+│   ├── services/
+│   │   ├── order_service.py  # Precios en servidor + reserva/liberación de stock
+│   │   ├── storage.py        # Almacenamiento de imágenes (local/cloudinary/s3)
+│   │   └── email_service.py  # Envío de correos (SMTP)
 │   ├── seed.py               # Datos iniciales
 │   ├── requirements.txt
 │   ├── alembic.ini           # Configuración de migraciones
@@ -166,6 +197,9 @@ graciacloting/
 │           └── admin.js      # Lógica admin
 └── assets/                   # Assets estáticos (imágenes, etc.)
 ```
+
+Además: `scripts/entrypoint.sh` (migraciones en base nueva + uvicorn) y
+`scripts/backup_db.sh` (backup de base de datos).
 
 ## API Endpoints
 

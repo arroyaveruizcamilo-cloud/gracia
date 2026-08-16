@@ -220,7 +220,6 @@ function renderProductDetail(p) {
     <p style="color:var(--text2);line-height:1.8;margin-bottom:24px">${escapeHtml(p.description || 'Descripción no disponible.')}</p>
     ${colors.length ? `<div style="margin-bottom:16px"><strong style="font-size:.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--text2)">Colores:</strong><div style="display:flex;gap:8px;margin-top:8px">${colors.map(([name, hex]) => `<span style="width:28px;height:28px;border-radius:50%;background:${hex};border:2px solid var(--border);cursor:pointer" title="${name}"></span>`).join('')}</div></div>` : ''}
     ${sizes.length ? `<div style="margin-bottom:24px"><strong style="font-size:.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--text2)">Tallas:</strong><div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">${sizes.map(s => `<span style="padding:6px 16px;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:.85rem">${s}</span>`).join('')}</div></div>` : ''}
-    ${p.stock <= 0 ? '<p style="color:var(--danger);font-weight:600;margin-bottom:16px"><i class="fas fa-times-circle"></i> Producto agotado — sin stock disponible</p>' : `<p style="color:var(--success);font-weight:600;margin-bottom:16px"><i class="fas fa-check-circle"></i> ${p.stock > 10 ? 'En stock — listo para envío' : `Solo quedan ${p.stock} unidades`}</p>`}
     <button class="btn btn-gold" onclick="addToCart(${p.id})" style="width:100%;padding:16px" ${p.stock <= 0 ? 'disabled' : ''}>${p.stock <= 0 ? 'Agotado' : 'Añadir al carrito'}</button>
     <button class="btn btn-outline" onclick="toggleWishlist(${p.id})" style="width:100%;margin-top:8px"><i class="fas fa-heart-o"></i> ${state.wishlist.has(p.id) ? 'Quitar de favoritos' : 'Añadir a favoritos'}</button>
   `;
@@ -411,7 +410,6 @@ async function quickView(id) {
             ${colors.length ? `<div style="margin:12px 0"><label style="font-size:.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Color</label>
               <div style="display:flex;gap:8px">${colors.map(([name, hex]) => `<span class="variant-dot" style="background:${hex};width:24px;height:24px" onclick="document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');state.selectedVariant.color='${name}'"></span>`).join('')}</div>
             </div>` : ''}
-            <div style="margin-top:8px;font-size:.8rem;color:${p.stock < 10 ? 'var(--danger)' : 'var(--success)'}">${p.stock < 10 ? `Solo ${p.stock} disponibles` : `${p.stock} en stock`}</div>
             <button class="btn btn-gold" style="width:100%;margin-top:16px" onclick="addToCart(${p.id}); this.closest('.modal-overlay').remove()">Añadir al Carrito</button>
           </div>
         </div>
@@ -766,8 +764,7 @@ async function submitOrder() {
     const order = await api.createOrder(data, state.token);
 
     if (selectedMethod === 'cod') {
-      await api.simulatePayment(order.order_id, state.token);
-      showSuccessView(order.order_id, total - disc, 'cod', email);
+      showSuccessView(order.order_id, order.total ?? total - disc, 'cod', email);
       state.cart = []; state.coupon = null;
       save('cart');
       updateCartUI();

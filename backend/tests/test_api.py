@@ -8,6 +8,13 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+# Desactivar límites de rate limiting durante los tests (se leen al importar)
+os.environ.setdefault("RATE_LIMIT_REGISTER", "200")
+os.environ.setdefault("RATE_LIMIT_LOGIN", "200")
+os.environ.setdefault("RATE_LIMIT_FORGOT", "200")
+os.environ.setdefault("RATE_LIMIT_RESET", "200")
+os.environ.setdefault("ENVIRONMENT", "development")
+
 _db_fd, _db_path = tempfile.mkstemp(suffix=".db")
 os.environ["DATABASE_URL"] = f"sqlite:///{_db_path}"
 
@@ -167,6 +174,156 @@ def test_payment_methods():
     assert resp.status_code == 200
     data = resp.json()
     assert "methods" in data
+
+
+# ─── Seguridad: precios del lado del servidor ────────────────
+def _register(name, email):
+    resp = client.post("/api/auth/register", json={
+        "name": name, "email": email, "password": "TestPass123",
+    })
+    assert resp.status_code == 200
+    return resp.json()["access_token"]
+
+
+def _get_product_stock(pid):
+    from database import SessionLocal
+    from models import Product
+    db = SessionLocal()
+    try:
+        return db.query(Product).filter(Product.id == pid).first().stock
+    finally:
+        db.close()
+
+
+def test_order_ignores_client_price():
+    token = _register("Precio User", "precio@example.com")
+    products = client.get("/api/products").json()
+    pid = products[0]["id"]
+    real_price = next(p["price"] for p in products if p["id"] == pid)
+
+    resp = client.post("/api/orders", json={
+        "customer_email": "precio@example.com",
+        "customer_name": "Precio User",
+        "shipping_address": "Calle 1",
+        "shipping_city": "Bogotá",
+        "payment_method": "card",
+        "subtotal": 0.01,
+        "discount": 99999,
+        "total": 0.01,
+        "items": [{"product_id": pid, "quantity": 1, "price": 0.01}],
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == real_price, f"Total debería ser {real_price}, fue {data['total']}"
+
+
+def test_order_with_coupon_discount_server_side():
+    from database import SessionLocal
+    from models import Coupon
+    db = SessionLocal()
+    db.add(Coupon(code="TEST10", discount_type="percentage", discount_value=10,
+                  min_purchase=0, usage_limit=100, is_active=True))
+    db.commit()
+    db.close()
+
+    token = _register("Coupon User", "coupon@example.com")
+    products = client.get("/api/products").json()
+    pid = products[0]["id"]
+    real_price = next(p["price"] for p in products if p["id"] == pid)
+
+    resp = client.post("/api/orders", json={
+        "customer_email": "coupon@example.com",
+        "customer_name": "Coupon User",
+        "shipping_address": "Calle 1",
+        "shipping_city": "Bogotá",
+        "payment_method": "card",
+        "coupon_code": "TEST10",
+        "items": [{"product_id": pid, "quantity": 1, "price": 9999}],
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert resp.json()["total"] == round(real_price * 0.9, 2)
+
+
+def test_order_invalid_coupon_ignored():
+    token = _register("BadCoupon User", "badcoupon@example.com")
+    products = client.get("/api/products").json()
+    pid = products[0]["id"]
+    real_price = next(p["price"] for p in products if p["id"] == pid)
+
+    resp = client.post("/api/orders", json={
+        "customer_email": "badcoupon@example.com",
+        "customer_name": "BadCoupon User",
+        "shipping_address": "Calle 1",
+        "shipping_city": "Bogotá",
+        "payment_method": "card",
+        "coupon_code": "NOEXISTE",
+        "discount": 99999,
+        "items": [{"product_id": pid, "quantity": 1, "price": 0.01}],
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    assert resp.json()["total"] == real_price
+
+
+# ─── Stock: reserva y liberación ─────────────────────────────
+def _make_admin(email):
+    from database import SessionLocal
+    from models import User
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            user = User(name="Admin Test", email=email,
+                        password_hash="x", role="admin")
+            db.add(user)
+        user.role = "admin"
+        db.commit()
+    finally:
+        db.close()
+
+
+def test_stock_reserved_and_released_on_cancel():
+    token = _register("Stock User", "stock@example.com")
+    admin_token = _register("Admin Log", "admin2@example.com")
+    _make_admin("admin2@example.com")
+
+    products = client.get("/api/products").json()
+    pid = products[0]["id"]
+    before = _get_product_stock(pid)
+
+    resp = client.post("/api/orders", json={
+        "customer_email": "stock@example.com",
+        "customer_name": "Stock User",
+        "shipping_address": "Calle 1",
+        "shipping_city": "Bogotá",
+        "payment_method": "card",
+        "items": [{"product_id": pid, "quantity": 2, "price": 0.01}],
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    order_id = resp.json()["order_id"]
+    assert _get_product_stock(pid) == before - 2
+
+    # Admin cancela la orden → el stock se libera
+    resp = client.post("/api/admin/order/status", json={
+        "id": order_id, "status": "Cancelado",
+    }, headers={"Authorization": f"Bearer {admin_token}"})
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    assert _get_product_stock(pid) == before
+
+
+def test_order_stock_insufficient_rejected():
+    token = _register("LowStock User", "lowstock@example.com")
+    products = client.get("/api/products").json()
+    pid = products[1]["id"]
+    resp = client.post("/api/orders", json={
+        "customer_email": "lowstock@example.com",
+        "customer_name": "LowStock User",
+        "shipping_address": "Calle 1",
+        "shipping_city": "Bogotá",
+        "payment_method": "card",
+        "items": [{"product_id": pid, "quantity": 9999, "price": 1}],
+    }, headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 400
 
 
 import atexit

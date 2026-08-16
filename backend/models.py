@@ -226,6 +226,7 @@ class Order(Base):
     tracking_number = Column(String(255), default="")
     notes = Column(Text, default="")
     delivered_at = Column(DateTime, nullable=True)
+    stock_released = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="orders")

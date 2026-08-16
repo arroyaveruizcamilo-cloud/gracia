@@ -267,7 +267,11 @@ async def lifespan(app: FastAPI):
         )
 
     admin = db.query(User).filter(User.role == UserRole.admin.value).first()
-    if not admin:
+    if admin:
+        # No sobreescribir credenciales ya configuradas en el panel: un deploy
+        # no debe revertir un cambio de contraseña hecho a mano.
+        logger.info("Admin ya existe — se ignoran SEED_ADMIN_* (no se pisan cambios manuales)")
+    else:
         if not (admin_email and admin_pass):
             logger.warning("No se creó admin: faltan SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD (solo dev)")
         else:
@@ -278,11 +282,17 @@ async def lifespan(app: FastAPI):
                 role="admin",
             )
             db.add(admin)
-    else:
-        # Solo actualizar email/password si se pasaron explícitamente (no pisar cambios manuales)
-        if admin_email and admin_pass:
-            admin.email = admin_email
-            admin.password_hash = hash_password(admin_pass)
+
+    if ENVIRONMENT == "production":
+        if not (os.getenv("SMTP_USER", "") and os.getenv("SMTP_PASS", "")):
+            raise RuntimeError(
+                "SMTP_USER y SMTP_PASS deben configurarse en producción para enviar "
+                "confirmaciones de pedido y reseteos de contraseña. "
+                "Referencia: https://myaccount.google.com/apppasswords (Gmail) o tu proveedor SMTP."
+            )
+        smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
+        logger.info(f"SMTP habilitado para envíos de email ({smtp_host})")
+
     db.commit()
 
     seed_products(db)
@@ -302,13 +312,19 @@ def _migrate_runtime():
     from sqlalchemy import text, inspect
     with engine.connect() as conn:
         inspector = inspect(conn)
-        if "conversations" not in inspector.get_table_names():
-            return
-        cols = {c["name"] for c in inspector.get_columns("conversations")}
-    if "guest_token" in cols:
-        return
-    with engine.begin() as conn:
-        conn.execute(text("ALTER TABLE conversations ADD COLUMN guest_token VARCHAR(128)"))
+        tables = set(inspector.get_table_names())
+
+        if "conversations" in tables:
+            cols = {c["name"] for c in inspector.get_columns("conversations")}
+            if "guest_token" not in cols:
+                with engine.begin() as conn2:
+                    conn2.execute(text("ALTER TABLE conversations ADD COLUMN guest_token VARCHAR(128)"))
+
+        if "orders" in tables:
+            cols = {c["name"] for c in inspector.get_columns("orders")}
+            if "stock_released" not in cols:
+                with engine.begin() as conn2:
+                    conn2.execute(text("ALTER TABLE orders ADD COLUMN stock_released BOOLEAN DEFAULT 0"))
 
 
 fastapi_app.router.lifespan_context = lifespan

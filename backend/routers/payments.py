@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
 from models import Order, OrderStatus, PaymentStatus, PaymentTransaction, User
 from auth import get_current_user, get_optional_user
+from services.order_service import release_stock
 from pydantic import BaseModel
 from typing import Optional
 import os, json, logging, hmac, hashlib, urllib.parse
@@ -298,11 +299,13 @@ def process_payment_notification(payment_id: str):
 
             elif mp_status in ("rejected", "cancelled", "chargeback") and order.payment_status != PaymentStatus.failed:
                 order.payment_status = PaymentStatus.failed
-                logger.info(f"Order {order_id} FAILED: {mp_status}")
+                release_stock(db, order)
+                logger.info(f"Order {order_id} FAILED: {mp_status} (stock released)")
 
             elif mp_status == "refunded":
                 order.payment_status = PaymentStatus.refunded
-                logger.info(f"Order {order_id} REFUNDED")
+                release_stock(db, order)
+                logger.info(f"Order {order_id} REFUNDED (stock released)")
 
             new_status = order.payment_status.value if hasattr(order.payment_status, "value") else order.payment_status
 
@@ -364,6 +367,7 @@ def check_payment_status(order_id: int, db: Session = Depends(get_db),
                     db.commit()
                 elif mp_status in ("rejected", "cancelled") and order.payment_status != PaymentStatus.failed:
                     order.payment_status = PaymentStatus.failed
+                    release_stock(db, order)
                     db.commit()
         except Exception:
             pass

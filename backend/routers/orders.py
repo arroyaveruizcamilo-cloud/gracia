@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Order, OrderItem, Product, ProductVariant, OrderStatus, PaymentStatus, Coupon, Notification, User, UserRole
+from models import Order, OrderItem, OrderStatus, PaymentStatus, Coupon, Notification, User, UserRole
 from schemas import OrderCreate
-from auth import require_admin, get_current_user, get_optional_user
+from auth import require_admin, get_optional_user
 from services.email_service import send_order_confirmation, send_admin_new_order, send_order_status_update
+from services.order_service import build_order_items, compute_coupon_discount, compute_shipping, reserve_stock, release_stock
 
 router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -48,54 +49,18 @@ def order_to_dict(o):
 @router.post("")
 def create_order(data: OrderCreate, db: Session = Depends(get_db),
                  current_user: User | None = Depends(get_optional_user)):
-    if not data.items:
-        raise HTTPException(status_code=400, detail="No hay productos en el pedido")
-
     # Validate delivery city
     if not data.shipping_city or not data.shipping_city.strip():
         raise HTTPException(status_code=400, detail="La ciudad de entrega es obligatoria")
 
-    total = data.subtotal if data.subtotal > 0 else 0
-    items_data = []
+    # Los precios, subtotales y descuentos se calculan SIEMPRE en el servidor.
+    # Cualquier valor enviado por el cliente es ignorado.
+    items_data = build_order_items(db, data.items)
 
-    for item_data in data.items:
-        product = db.query(Product).filter(Product.id == item_data.product_id).first()
-        if not product or product.status != "active":
-            continue
-
-        # Check variant stock if specified
-        if item_data.variant_size or item_data.variant_color:
-            variant = db.query(ProductVariant).filter(
-                ProductVariant.product_id == product.id,
-                ProductVariant.size == item_data.variant_size,
-                ProductVariant.color == item_data.variant_color,
-            ).first()
-            if variant:
-                if variant.stock < item_data.quantity:
-                    raise HTTPException(status_code=400,
-                                        detail=f"Stock insuficiente para {product.name} ({item_data.variant_size}/{item_data.variant_color})")
-                variant.stock -= item_data.quantity
-                price = item_data.price if item_data.price > 0 else (variant.price_override or product.price)
-            else:
-                price = item_data.price if item_data.price > 0 else product.price
-        else:
-            if product.stock < item_data.quantity:
-                raise HTTPException(status_code=400,
-                                    detail=f"Stock insuficiente para {product.name}")
-            product.stock -= item_data.quantity
-            price = item_data.price if item_data.price > 0 else product.price
-
-        items_data.append({
-            "product_id": product.id,
-            "product_name": product.name,
-            "variant_size": item_data.variant_size,
-            "variant_color": item_data.variant_color,
-            "quantity": item_data.quantity,
-            "price": price,
-        })
-
-    if not items_data:
-        raise HTTPException(status_code=400, detail="No hay productos válidos en el pedido")
+    subtotal = round(sum(it["price"] * it["quantity"] for it in items_data), 2)
+    discount, coupon_code = compute_coupon_discount(db, data.coupon_code, subtotal)
+    shipping_cost = compute_shipping(subtotal)
+    total = round(subtotal - discount + shipping_cost, 2)
 
     name = data.customer_name or data.customer_email.split('@')[0] or 'Cliente'
     order = Order(
@@ -107,25 +72,29 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db),
         shipping_city=data.shipping_city,
         shipping_state=data.shipping_state,
         shipping_zip=data.shipping_zip,
-        shipping_cost=data.shipping_cost,
-        coupon_code=data.coupon_code,
-        discount=data.discount,
-        subtotal=data.subtotal,
-        total=data.total or total + data.shipping_cost - data.discount,
+        shipping_cost=shipping_cost,
+        coupon_code=coupon_code,
+        discount=discount,
+        subtotal=subtotal,
+        total=total,
         status=OrderStatus.pending,
         payment_status=PaymentStatus.pending,
         payment_method=data.payment_method,
         notes=data.notes,
     )
     db.add(order)
+
+    # Reservar stock en la misma transacción (se revierte si la orden se cancela o falla)
+    reserve_stock(db, items_data)
     db.flush()
 
     for it in items_data:
-        db.add(OrderItem(order_id=order.id, **it))
+        item_fields = {k: v for k, v in it.items() if not k.startswith("_")}
+        db.add(OrderItem(order_id=order.id, **item_fields))
 
-    # Mark coupon as used
-    if data.coupon_code:
-        coupon = db.query(Coupon).filter(Coupon.code == data.coupon_code).first()
+    # Mark coupon as used (only if it was actually applied)
+    if coupon_code:
+        coupon = db.query(Coupon).filter(Coupon.code == coupon_code).first()
         if coupon:
             coupon.used_count += 1
 
@@ -193,12 +162,18 @@ def update_order_status(order_id: int, data: dict, db: Session = Depends(get_db)
         if data["status"] not in valid_statuses:
             raise HTTPException(status_code=400, detail=f"Estados válidos: {valid_statuses}")
         order.status = data["status"]
+        # Liberar stock reservado si la orden se cancela
+        if data["status"] == OrderStatus.cancelled.value:
+            release_stock(db, order)
 
     if "payment_status" in data:
         valid_payment = [s.value for s in PaymentStatus]
         if data["payment_status"] not in valid_payment:
             raise HTTPException(status_code=400, detail=f"Estados válidos: {valid_payment}")
         order.payment_status = data["payment_status"]
+        # Si el pago se marca como fallido/reembolsado, liberar stock
+        if data["payment_status"] in (PaymentStatus.failed.value, PaymentStatus.refunded.value):
+            release_stock(db, order)
 
     if "tracking_number" in data:
         order.tracking_number = data["tracking_number"]

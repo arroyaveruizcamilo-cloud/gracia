@@ -12,9 +12,20 @@ from models import User
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 SECRET_KEY = os.getenv("JWT_SECRET", os.getenv("SECRET_KEY", ""))
-if not SECRET_KEY:
+_WEAK_SECRETS = {
+    "dev-insecure-secret-change-me",
+    "gracia-secret-key-2026",
+    "secret",
+    "change-me",
+    "changeme",
+}
+if not SECRET_KEY or SECRET_KEY in _WEAK_SECRETS or len(SECRET_KEY) < 32:
     if ENVIRONMENT == "production":
-        raise RuntimeError("JWT_SECRET no está configurado. Generá uno con: python -c \"import secrets; print(secrets.token_urlsafe(64))\"")
+        raise RuntimeError(
+            "JWT_SECRET no está configurado con un valor seguro. "
+            "Generá uno con: python -c \"import secrets; print(secrets.token_urlsafe(64))\" "
+            "y configuralo en la variable de entorno JWT_SECRET."
+        )
     SECRET_KEY = "dev-insecure-secret-change-me"
 
 ALGORITHM = "HS256"

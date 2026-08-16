@@ -11,6 +11,7 @@ from schemas import OrderStatusRequest, NotifSendRequest, CategoryRequest, Colle
 from auth import require_admin, get_current_user
 from datetime import datetime, timedelta, timezone
 from utils import db_to_dict as row_to_dict
+from services.order_service import release_stock
 
 router = APIRouter()
 
@@ -168,6 +169,8 @@ async def admin_order_status(body: OrderStatusRequest,
     order.status = body.status
     if body.status == "Entregado":
         order.delivered_at = datetime.now(timezone.utc)
+    if body.status == "Cancelado":
+        release_stock(db, order)
     db.add(OrderTimeline(
         order_id=order.id, status=body.status,
         note=body.note or f"Estado actualizado: {body.status}",
