@@ -126,6 +126,39 @@ function getRecaptchaToken() {
   }
 }
 
+// ===== MATH CAPTCHA =====
+async function loadMathCaptcha() {
+  try {
+    const res = await fetch('/api/auth/captcha');
+    const data = await res.json();
+    const label = $('#captcha-label');
+    const tokenInput = $('#captcha-token');
+    const answerInput = $('#captcha-answer');
+    if (label && data.question) {
+      label.textContent = data.question;
+    }
+    if (tokenInput && data.token) {
+      tokenInput.value = data.token;
+    }
+    if (answerInput) {
+      answerInput.value = '';
+      answerInput.focus();
+    }
+  } catch (err) {
+    const label = $('#captcha-label');
+    if (label) label.textContent = 'Error cargando verificación. Recargá la página.';
+  }
+}
+
+function getCaptchaAnswer() {
+  const tokenInput = $('#captcha-token');
+  const answerInput = $('#captcha-answer');
+  return {
+    token: tokenInput ? tokenInput.value : '',
+    answer: answerInput ? parseInt(answerInput.value, 10) || 0 : 0,
+  };
+}
+
 async function handleLogin(e) {
   e.preventDefault();
   const email = $('#login-email').value;
@@ -141,11 +174,19 @@ async function handleLogin(e) {
     return;
   }
 
+  // Validate math CAPTCHA
+  const captcha = getCaptchaAnswer();
+  if (!captcha.token || isNaN(captcha.answer)) {
+    errEl.textContent = 'Por favor completá la verificación matemática.';
+    errEl.style.display = 'block';
+    return;
+  }
+
   const submitBtn = e.target.querySelector('button[type="submit"]');
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Verificando...'; }
 
   try {
-    const res = await api.login(email, password, recaptchaToken);
+    const res = await api.login(email, password, recaptchaToken, captcha.token, captcha.answer);
 
     if (res.requires_2fa) {
       state.tempToken = res.temp_token || null;
@@ -185,6 +226,8 @@ async function handleLogin(e) {
     if (typeof grecaptcha !== 'undefined' && state.recaptchaKey) {
       try { grecaptcha.reset(); } catch {}
     }
+    // Refresh math CAPTCHA on failure
+    loadMathCaptcha();
   }
 }
 
@@ -1111,6 +1154,12 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#twofa-code').addEventListener('input', (e) => {
     e.target.value = e.target.value.replace(/[^0-9]/g, '');
   });
+
+  // Math CAPTCHA: load on login and wire refresh button
+  loadMathCaptcha();
+  const refreshBtn = $('#captcha-refresh');
+  if (refreshBtn) refreshBtn.addEventListener('click', loadMathCaptcha);
+
   $('#product-form-element').addEventListener('submit', saveProduct);
   $('#product-cancel-btn').addEventListener('click', closeProductForm);
   $('#product-modal').addEventListener('click', e => { if (e.target === $('#product-modal')) closeProductForm(); });

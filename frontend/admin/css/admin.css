@@ -1025,3 +1025,50 @@ tbody tr:hover td { background: rgba(184, 148, 31, 0.04); }
   .login-page { align-items: flex-start; padding-top: 24px; }
   .admin-chat-grid { min-height: 360px; }
 }
+
+/* ===== MATH CAPTCHA ===== */
+#math-captcha-container {
+  background: linear-gradient(135deg, rgba(184,148,31,0.06), rgba(184,148,31,0.02));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+#math-captcha-container label {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
+  margin-bottom: 10px;
+}
+.captcha-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.captcha-row input[type="number"] {
+  flex: 1;
+  min-width: 0;
+}
+.btn-captcha-refresh {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--gold);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.btn-captcha-refresh:hover {
+  background: var(--gold-glow);
+  border-color: var(--gold);
+  transform: rotate(90deg);
+}
+.btn-captcha-refresh:active {
+  transform: rotate(180deg) scale(0.95);
+}

@@ -15,6 +15,8 @@ class UserLogin(BaseModel):
     email: str
     password: str
     recaptcha_token: str = ""
+    captcha_token: str = ""
+    captcha_answer: int = 0
 
 
 class UserOut(BaseModel):

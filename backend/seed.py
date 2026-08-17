@@ -88,13 +88,13 @@ def seed_database():
 
     categories = {c.name: c.id for c in db.query(Category).all()}
 
-    admin_email = "arroyaveruizcamilo@gmail.com"
+    admin_email = "Vanessaarroyave1190@gmail.com"
     admin = db.query(User).filter(User.email == admin_email).first()
     if not admin:
         admin = User(
             name="Administrador",
             email=admin_email,
-            password_hash=hash_password("camilo2006_RZ@"),
+            password_hash=hash_password("Camifeli2020*"),
             role="admin",
             email_verified=True,
             phone="+57 300 123 4567",

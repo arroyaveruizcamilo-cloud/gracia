@@ -132,7 +132,7 @@ def check_account_lockout(user: User):
 
 
 def handle_failed_login(user: User, db: Session):
-    user.failed_login_attempts += 1
+    user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
     if user.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
         user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_MINUTES)
         logger.warning(f"Cuenta bloqueada: {user.email} por {LOCKOUT_MINUTES} min (intentos fallidos: {user.failed_login_attempts})")
@@ -140,7 +140,7 @@ def handle_failed_login(user: User, db: Session):
 
 
 def reset_failed_logins(user: User, db: Session):
-    if user.failed_login_attempts > 0 or user.locked_until:
+    if (user.failed_login_attempts or 0) > 0 or user.locked_until:
         user.failed_login_attempts = 0
         user.locked_until = None
         db.commit()
@@ -165,6 +165,77 @@ async def verify_recaptcha(token: str, remote_ip: str = "") -> bool:
     except Exception as e:
         logger.error(f"reCAPTCHA verification error: {e}")
         return False
+
+
+# ===== MATH CAPTCHA (custom, no Google needed) =====
+import random
+import hashlib
+
+_CAPTCHA_EXPIRE_SECONDS = 120  # 2 minutes
+
+class CaptchaChallenge(BaseModel):
+    question: str
+    token: str
+
+class CaptchaVerify(BaseModel):
+    token: str
+    answer: int
+
+
+def _generate_captcha_token(a: int, b: int, op: str, answer: int) -> str:
+    ts = int(time.time())
+    payload = f"{a}:{op}:{b}:{answer}:{ts}"
+    sig = hashlib.sha256((payload + ":" + SECRET_KEY).encode()).hexdigest()[:16]
+    return f"{a}:{op}:{b}:{ts}:{sig}"
+
+
+def _verify_captcha_token(token: str, user_answer: int) -> bool:
+    try:
+        parts = token.split(":")
+        if len(parts) != 5:
+            return False
+        a, op, b, ts_str, sig = parts
+        ts = int(ts_str)
+        if time.time() - ts > _CAPTCHA_EXPIRE_SECONDS:
+            return False
+        if op == "+":
+            correct = int(a) + int(b)
+        elif op == "-":
+            correct = int(a) - int(b)
+        elif op == "*":
+            correct = int(a) * int(b)
+        else:
+            return False
+        if user_answer != correct:
+            return False
+        expected_sig = hashlib.sha256(f"{a}:{op}:{b}:{correct}:{ts}:{SECRET_KEY}".encode()).hexdigest()[:16]
+        return sig == expected_sig
+    except Exception:
+        return False
+
+
+@router.get("/captcha", response_model=CaptchaChallenge)
+def generate_captcha():
+    ops = ["+", "-", "*"]
+    op = random.choice(ops)
+    if op == "+":
+        a, b = random.randint(1, 50), random.randint(1, 50)
+    elif op == "-":
+        a = random.randint(10, 60)
+        b = random.randint(1, a)
+    else:
+        a, b = random.randint(2, 12), random.randint(2, 12)
+    answer = eval(f"{a} {op} {b}")
+    token = _generate_captcha_token(a, b, op, answer)
+    question = f"¿Cuánto es {a} {op} {b}?"
+    return CaptchaChallenge(question=question, token=token)
+
+
+@router.post("/captcha/verify")
+def verify_captcha(data: CaptchaVerify):
+    if not _verify_captcha_token(data.token, data.answer):
+        raise HTTPException(status_code=400, detail="CAPTCHA incorrecto. Intentá de nuevo.")
+    return {"valid": True}
 
 
 # ===== REGISTER =====
@@ -211,6 +282,15 @@ async def login(request: Request, data: UserLogin, db: Session = Depends(get_db)
             except Exception:
                 pass
         raise HTTPException(status_code=403, detail="Verificación reCAPTCHA fallida. Intentá de nuevo.")
+
+    # Verify math CAPTCHA (always enforced — custom fallback if no reCAPTCHA)
+    if data.captcha_token and not _verify_captcha_token(data.captcha_token, data.captcha_answer):
+        log_login_attempt(db, None, data.email, client_ip, False, "captcha_failed")
+        raise HTTPException(status_code=403, detail="CAPTCHA incorrecto. Intentá de nuevo.")
+    elif not RECAPTCHA_SECRET_KEY and not data.captcha_token:
+        # No reCAPTCHA configured AND no math captcha provided
+        log_login_attempt(db, None, data.email, client_ip, False, "captcha_missing")
+        raise HTTPException(status_code=403, detail="Debes completar el CAPTCHA.")
 
     user = db.query(User).filter(User.email == data.email).first()
 
