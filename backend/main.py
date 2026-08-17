@@ -231,6 +231,12 @@ def app_config():
     }
 
 
+@fastapi_app.get("/api/config/recaptcha")
+def recaptcha_config():
+    site_key = os.getenv("RECAPTCHA_SITE_KEY", "")
+    return {"site_key": site_key, "enabled": bool(site_key)}
+
+
 fastapi_app.include_router(auth.router, prefix="/api")
 fastapi_app.include_router(coupons.router, prefix="/api")
 fastapi_app.include_router(faqs.router, prefix="/api")

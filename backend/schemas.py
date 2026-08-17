@@ -14,6 +14,7 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: str
+    recaptcha_token: str = ""
 
 
 class UserOut(BaseModel):
@@ -32,6 +33,7 @@ class Token(BaseModel):
     token_type: str
     user: UserOut
     requires_2fa: bool = False
+    temp_token: str = ""
 
 
 class TwoFactorSetup(BaseModel):

@@ -14,7 +14,7 @@ const api = {
   },
 
   // Auth
-  login(email, pwd) { return this.request('POST', '/auth/login', { email, password: pwd }); },
+  login(email, pwd, recaptchaToken = '') { return this.request('POST', '/auth/login', { email, password: pwd, recaptcha_token: recaptchaToken }); },
   verify2fa(tempToken, code) { return this.request('POST', '/auth/2fa/verify', { temp_token: tempToken, code }); },
   setup2fa(token) { return this.request('POST', '/auth/2fa/setup', null, token); },
   enable2fa(code, token) { return this.request('POST', '/auth/2fa/enable', { code }, token); },

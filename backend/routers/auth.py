@@ -2,6 +2,7 @@ import os
 import time
 import logging
 import secrets
+import httpx
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -24,6 +25,11 @@ except ImportError:
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 logger = logging.getLogger("gracia.auth")
+
+# reCAPTCHA config
+RECAPTCHA_SECRET_KEY = os.getenv("RECAPTCHA_SECRET_KEY", "")
+RECAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify"
+RECAPTCHA_MIN_SCORE = 0.5  # For v3; for v2, success field is used
 
 # --- Config ---
 MAX_FAILED_ATTEMPTS = int(os.getenv("MAX_FAILED_ATTEMPTS", "5"))
@@ -122,6 +128,27 @@ def reset_failed_logins(user: User, db: Session):
         db.commit()
 
 
+async def verify_recaptcha(token: str, remote_ip: str = "") -> bool:
+    """Verify a reCAPTCHA token with Google. Returns True if valid."""
+    if not RECAPTCHA_SECRET_KEY:
+        # reCAPTCHA not configured — skip verification (dev mode)
+        return True
+    if not token:
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(RECAPTCHA_VERIFY_URL, data={
+                "secret": RECAPTCHA_SECRET_KEY,
+                "response": token,
+                "remoteip": remote_ip,
+            })
+            result = resp.json()
+            return result.get("success", False)
+    except Exception as e:
+        logger.error(f"reCAPTCHA verification error: {e}")
+        return False
+
+
 # ===== REGISTER =====
 @router.post("/register")
 def register(data: UserRegister, db: Session = Depends(get_db)):
@@ -148,13 +175,18 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
 
 # ===== LOGIN =====
 @router.post("/login")
-def login(request: Request, data: UserLogin, db: Session = Depends(get_db)):
+async def login(request: Request, data: UserLogin, db: Session = Depends(get_db)):
     client_ip = request.client.host if request.client else "unknown"
     forwarded = request.headers.get("x-forwarded-for", "")
     if forwarded:
         client_ip = forwarded.split(",")[0].strip()
 
     check_login_rate_limit(client_ip)
+
+    # Verify reCAPTCHA token
+    if RECAPTCHA_SECRET_KEY and not await verify_recaptcha(data.recaptcha_token, client_ip):
+        log_login_attempt(db, None, data.email, client_ip, False, "recaptcha_failed")
+        raise HTTPException(status_code=403, detail="Verificación reCAPTCHA fallida. Intentá de nuevo.")
 
     user = db.query(User).filter(User.email == data.email).first()
 
@@ -191,6 +223,7 @@ def login(request: Request, data: UserLogin, db: Session = Depends(get_db)):
             token_type="bearer",
             user=UserOut(id=user.id, name=user.name, email=user.email, phone=user.phone, role=user.role),
             requires_2fa=True,
+            temp_token=temp_token,
         )
 
     # Success - no 2FA

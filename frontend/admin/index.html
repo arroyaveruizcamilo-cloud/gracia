@@ -2,10 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gracia Clothing - Panel administrativo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Gracia Clothing — Panel administrativo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link rel="stylesheet" href="/frontend/admin/css/admin.css">
 </head>
@@ -14,8 +15,10 @@
 <!-- ===== LOGIN ===== -->
 <div class="login-page" id="login-page">
   <div class="login-box">
-    <h1>Gracia<span>Clothing</span></h1>
-    <p>Panel de Administración</p>
+    <div class="login-brand">
+      <h1>Gracia<span>Clothing</span></h1>
+      <p class="login-subtitle">Panel de Administración</p>
+    </div>
     <form id="login-form">
       <div class="error-msg" id="login-error"></div>
       <div class="form-group">
@@ -26,6 +29,9 @@
         <label>Contraseña</label>
         <input type="password" id="login-password" placeholder="••••••••" required>
       </div>
+      <div class="form-group" id="recaptcha-container" style="display:none">
+        <div id="recaptcha-widget"></div>
+      </div>
       <button type="submit" class="btn btn-gold">Iniciar Sesión</button>
     </form>
   </div>
@@ -34,17 +40,19 @@
 <!-- ===== 2FA VERIFICATION ===== -->
 <div class="login-page" id="twofa-page" style="display:none">
   <div class="login-box">
-    <h1>Gracia<span>Clothing</span></h1>
-    <p>Verificación de Dos Factores</p>
+    <div class="login-brand">
+      <h1>Gracia<span>Clothing</span></h1>
+      <p class="login-subtitle">Verificación de Dos Factores</p>
+    </div>
     <form id="twofa-form">
       <div class="error-msg" id="twofa-error"></div>
       <div class="form-group">
         <label>Código de Autenticación</label>
         <input type="text" id="twofa-code" placeholder="000000" pattern="[0-9]{6}" maxlength="6" inputmode="numeric" autocomplete="one-time-code" required>
-        <small style="color:var(--text2);font-size:.7rem;display:block;margin-top:4px">Ingresá el código de tu app de autenticación</small>
+        <small>Ingresá el código de tu app de autenticación</small>
       </div>
       <button type="submit" class="btn btn-gold">Verificar</button>
-      <button type="button" class="btn" id="twofa-back-btn" style="width:100%;margin-top:8px">Volver al Login</button>
+      <button type="button" class="btn btn-ghost" id="twofa-back-btn">Volver al Login</button>
     </form>
   </div>
 </div>
@@ -61,7 +69,7 @@
       <a href="#" data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i><span>Dashboard</span></a>
       <a href="#" data-page="products"><i class="fas fa-box"></i><span>Productos</span></a>
       <a href="#" data-page="orders"><i class="fas fa-shopping-cart"></i><span>Pedidos</span></a>
-      <a href="#" data-page="chat" id="admin-chat-nav"><i class="fas fa-comments"></i><span>Chat <span id="admin-chat-badge" style="display:none;background:var(--danger);color:#fff;font-size:.55rem;padding:1px 6px;border-radius:8px;margin-left:4px">0</span></span></a>
+      <a href="#" data-page="chat" id="admin-chat-nav"><i class="fas fa-comments"></i><span>Chat <span id="admin-chat-badge">0</span></span></a>
       <a href="#" data-page="messages"><i class="fas fa-envelope"></i><span>Mensajes</span></a>
       <a href="#" data-page="customers"><i class="fas fa-users"></i><span>Clientes</span></a>
       <a href="#" data-page="catalog"><i class="fas fa-th-large"></i><span>Catálogo</span></a>
@@ -90,76 +98,113 @@
     <!-- DASHBOARD -->
     <div class="page-section active" id="page-dashboard">
       <div class="stats-grid">
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-shopping-cart"></i></div><div class="stat-value" id="stat-orders">0</div><div class="stat-label">Total Pedidos</div></div>
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-dollar-sign"></i></div><div class="stat-value" id="stat-revenue">$0</div><div class="stat-label">Ingresos Totales</div></div>
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-box"></i></div><div class="stat-value" id="stat-products">0</div><div class="stat-label">Productos Activos</div></div>
-        <div class="stat-card"><div class="stat-icon"><i class="fas fa-envelope"></i></div><div class="stat-value" id="stat-messages">0</div><div class="stat-label">Mensajes</div></div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-orders">0</div>
+            <div class="stat-label">Total Pedidos</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-revenue">$0</div>
+            <div class="stat-label">Ingresos Totales</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-box"></i></div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-products">0</div>
+            <div class="stat-label">Productos Activos</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-envelope"></i></div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-messages">0</div>
+            <div class="stat-label">Mensajes</div>
+          </div>
+        </div>
       </div>
       <div class="section-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="section-card-header">
           <h2>Alertas</h2>
-          <span id="low-stock-warning"><i class="fas fa-check-circle" style="color:var(--success)"></i> Stock normal</span>
+          <span id="low-stock-warning" class="alert-ok"><i class="fas fa-check-circle"></i> Stock normal</span>
         </div>
       </div>
       <div class="section-card">
         <h2>Pedidos Recientes</h2>
-        <div class="table-wrap"><table id="recent-orders"><thead><tr><th>#</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead><tbody><tr><td colspan="5" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="recent-orders">
+            <thead><tr><th>#</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Fecha</th></tr></thead>
+            <tbody><tr><td colspan="5" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <!-- PRODUCTS -->
     <div class="page-section" id="page-products">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <h2 style="font-family:var(--font-d)">Gestión de Productos</h2>
-        <button class="btn btn-gold" onclick="openProductForm()" style="width:auto"><i class="fas fa-plus"></i> Nuevo Producto</button>
+      <div class="page-toolbar">
+        <h2 class="page-title">Gestión de Productos</h2>
+        <button class="btn btn-gold" onclick="openProductForm()"><i class="fas fa-plus"></i> Nuevo Producto</button>
       </div>
       <div class="section-card">
-        <div class="table-wrap"><table id="products-table"><thead><tr><th>ID</th><th>Img</th><th>Nombre</th><th>Precio</th><th>Cat</th><th>Stock</th><th>Var</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="9" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="products-table">
+            <thead><tr><th>ID</th><th>Img</th><th>Nombre</th><th>Precio</th><th>Cat</th><th>Stock</th><th>Var</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody><tr><td colspan="9" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <!-- ORDERS -->
     <div class="page-section" id="page-orders">
-      <h2 style="font-family:var(--font-d);margin-bottom:20px">Gestión de Pedidos</h2>
+      <h2 class="page-title">Gestión de Pedidos</h2>
       <div class="section-card">
-        <div class="table-wrap"><table id="orders-table"><thead><tr><th>#</th><th>Cliente</th><th>Email</th><th>Total</th><th>Estado</th><th>Pago</th><th>Cambiar + Tracking</th></tr></thead><tbody><tr><td colspan="7" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="orders-table">
+            <thead><tr><th>#</th><th>Cliente</th><th>Email</th><th>Total</th><th>Estado</th><th>Pago</th><th>Cambiar + Tracking</th></tr></thead>
+            <tbody><tr><td colspan="7" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <!-- CHAT -->
     <div class="page-section" id="page-chat">
-      <h2 style="font-family:var(--font-d);margin-bottom:20px">Chat en Vivo</h2>
-      <div class="admin-chat-grid" style="display:grid;grid-template-columns:320px 1fr;gap:0;background:#fff;border:1px solid var(--gray-mid);min-height:500px">
-        <!-- Conversations list -->
-        <div class="admin-chat-conv-col" style="border-right:1px solid var(--gray-mid);display:flex;flex-direction:column">
-          <div style="padding:16px;border-bottom:1px solid var(--gray-mid);font-size:.7rem;text-transform:uppercase;letter-spacing:2px;color:var(--gray);font-weight:600">Conversaciones</div>
-          <div id="admin-chat-list" style="flex:1;overflow-y:auto">
-            <div style="padding:20px;text-align:center;color:var(--gray);font-size:.75rem">Cargando...</div>
+      <h2 class="page-title">Chat en Vivo</h2>
+      <div class="admin-chat-grid">
+        <div class="admin-chat-conv-col">
+          <div class="admin-chat-list-title">Conversaciones</div>
+          <div id="admin-chat-list">
+            <div class="admin-chat-empty">Cargando...</div>
           </div>
         </div>
-        <!-- Chat view -->
-        <div style="display:flex;flex-direction:column;background:var(--gray-light)" id="admin-chat-view">
-          <div id="admin-chat-placeholder" style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--gray);font-size:.8rem">
-            <div style="text-align:center">
-              <i class="fas fa-comments" style="font-size:3rem;opacity:.3;margin-bottom:12px;display:block"></i>
+        <div class="admin-chat-view" id="admin-chat-view">
+          <div id="admin-chat-placeholder">
+            <div class="placeholder-inner">
+              <i class="fas fa-comments"></i>
               Selecciona una conversación
             </div>
           </div>
-          <div id="admin-chat-active" style="display:none;flex-direction:column;flex:1">
-            <div id="admin-chat-header" style="padding:12px 20px;background:#fff;border-bottom:1px solid var(--gray-mid);display:flex;justify-content:space-between;align-items:center">
+          <div id="admin-chat-active">
+            <div id="admin-chat-header">
               <div>
-                <div style="font-weight:600;font-size:.85rem" id="admin-chat-user-name">—</div>
-                <div style="font-size:.7rem;color:var(--gray)" id="admin-chat-user-email">—</div>
+                <div id="admin-chat-user-name">—</div>
+                <div id="admin-chat-user-email">—</div>
               </div>
               <button class="btn btn-sm btn-outline" id="admin-chat-close-btn"><i class="fas fa-times"></i> Cerrar</button>
             </div>
-            <div id="admin-chat-messages" style="flex:1;overflow-y:auto;padding:16px 20px"></div>
-            <div id="admin-chat-typing" style="display:none;padding:4px 20px;font-size:.7rem;color:var(--gray)">
+            <div id="admin-chat-messages"></div>
+            <div id="admin-chat-typing">
               <span class="admin-typing-dot"></span><span class="admin-typing-dot"></span><span class="admin-typing-dot"></span> Escribiendo...
             </div>
-            <div style="display:flex;padding:12px 16px;border-top:1px solid var(--gray-mid);background:#fff;gap:8px">
-              <input type="text" id="admin-chat-input" placeholder="Escribe tu respuesta..." style="flex:1;padding:8px 14px;border:1px solid var(--gray-mid);font-family:var(--body);font-size:.8rem;outline:none">
-              <button class="btn btn-gold btn-sm" id="admin-chat-send" style="padding:8px 20px">Enviar</button>
+            <div class="admin-chat-compose">
+              <input type="text" id="admin-chat-input" placeholder="Escribe tu respuesta...">
+              <button class="btn btn-gold btn-sm" id="admin-chat-send">Enviar</button>
             </div>
           </div>
         </div>
@@ -168,111 +213,156 @@
 
     <!-- MESSAGES -->
     <div class="page-section" id="page-messages">
-      <h2 style="font-family:var(--font-d);margin-bottom:20px">Mensajes de Contacto</h2>
+      <h2 class="page-title">Mensajes de Contacto</h2>
       <div class="section-card">
-        <div class="table-wrap"><table id="messages-table"><thead><tr><th>Nombre</th><th>Email</th><th>Mensaje</th><th>Fecha</th></tr></thead><tbody><tr><td colspan="4" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="messages-table">
+            <thead><tr><th>Nombre</th><th>Email</th><th>Mensaje</th><th>Fecha</th></tr></thead>
+            <tbody><tr><td colspan="4" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <!-- CUSTOMERS -->
     <div class="page-section" id="page-customers">
-      <h2 style="font-family:var(--font-d);margin-bottom:20px">Clientes</h2>
+      <h2 class="page-title">Clientes</h2>
       <div class="section-card">
-        <div class="table-wrap"><table id="customers-table"><thead><tr><th>ID</th><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Pedidos</th><th>Total Gasto</th><th>Último Pedido</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="9" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="customers-table">
+            <thead><tr><th>ID</th><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Pedidos</th><th>Total Gasto</th><th>Último Pedido</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody><tr><td colspan="9" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- CATALOG (Categorías + Colecciones + Banners) -->
+    <!-- CATALOG -->
     <div class="page-section" id="page-catalog">
-      <h2 style="font-family:var(--font-d);margin-bottom:20px">Catálogo</h2>
+      <h2 class="page-title">Catálogo</h2>
 
       <div class="section-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="section-card-header">
           <h2>Categorías</h2>
           <button class="btn btn-sm btn-gold" onclick="openCategoryForm()"><i class="fas fa-plus"></i> Nueva</button>
         </div>
-        <div class="table-wrap"><table id="categories-table"><thead><tr><th>Nombre</th><th>Slug</th><th>Productos</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="6" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="categories-table">
+            <thead><tr><th>Nombre</th><th>Slug</th><th>Productos</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody><tr><td colspan="6" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="section-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="section-card-header">
           <h2>Colecciones</h2>
           <button class="btn btn-sm btn-gold" onclick="openCollectionForm()"><i class="fas fa-plus"></i> Nueva</button>
         </div>
-        <div class="table-wrap"><table id="collections-table"><thead><tr><th>Nombre</th><th>Slug</th><th>Productos</th><th>Destacada</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="6" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="collections-table">
+            <thead><tr><th>Nombre</th><th>Slug</th><th>Productos</th><th>Destacada</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody><tr><td colspan="6" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="section-card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="section-card-header">
           <h2>Banners</h2>
           <button class="btn btn-sm btn-gold" onclick="openBannerForm()"><i class="fas fa-plus"></i> Nuevo</button>
         </div>
-        <div class="table-wrap"><table id="banners-table"><thead><tr><th>Imagen</th><th>Título</th><th>Subtítulo</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="6" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="banners-table">
+            <thead><tr><th>Imagen</th><th>Título</th><th>Subtítulo</th><th>Orden</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody><tr><td colspan="6" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <!-- MARKETING / CUPONES -->
+    <!-- MARKETING -->
     <div class="page-section" id="page-marketing">
-      <h2 style="font-family:var(--font-d);margin-bottom:20px">Cupones de Descuento</h2>
+      <h2 class="page-title">Cupones de Descuento</h2>
       <div class="section-card">
         <h2>Crear Cupón</h2>
-        <form id="coupon-form" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr;gap:12px;align-items:end">
+        <form id="coupon-form">
           <div class="form-group"><label>Código</label><input type="text" id="coupon-code" placeholder="GRACIA20" required></div>
           <div class="form-group"><label>Tipo</label><select id="coupon-type"><option value="percentage">%</option><option value="fixed">Fijo</option></select></div>
           <div class="form-group"><label>Valor</label><input type="number" id="coupon-value" step="0.01" required></div>
           <div class="form-group"><label>Compra Mín</label><input type="number" id="coupon-min" step="0.01" value="0"></div>
           <div class="form-group"><label>Usos Máx</label><input type="number" id="coupon-uses" value="0"></div>
           <div class="form-group"><label>Vence</label><input type="date" id="coupon-expires"></div>
-          <button type="submit" class="btn btn-gold" style="grid-column:1/-1">Crear Cupón</button>
+          <button type="submit" class="btn btn-gold">Crear Cupón</button>
         </form>
       </div>
       <div class="section-card">
         <h2>Cupones Existentes</h2>
-        <div class="table-wrap"><table id="coupons-table"><thead><tr><th>Código</th><th>Valor</th><th>Compra Mín</th><th>Usos</th><th>Vence</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="7" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="coupons-table">
+            <thead><tr><th>Código</th><th>Valor</th><th>Compra Mín</th><th>Usos</th><th>Vence</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody><tr><td colspan="7" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
       <div class="section-card">
         <h2>Notificación Push a Todos</h2>
-        <p style="color:var(--text2);font-size:.9rem;margin-bottom:12px">Se envía en vivo a todos los clientes conectados. Usa mensajes como "¡Nueva colección disponible!" o "Envío gratis hoy".</p>
-        <form id="notif-form" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:end">
-          <div class="form-group"><label>Ícono</label><select id="notif-type"><option value="info">ℹ️ Info</option><option value="promo">🔥 Promo</option><option value="sale">🎉 Oferta</option></select></div>
+        <p class="section-hint">Se envía en vivo a todos los clientes conectados. Usa mensajes como "¡Nueva colección disponible!" o "Envío gratis hoy".</p>
+        <form id="notif-form">
+          <div class="form-group"><label>Ícono</label><select id="notif-type"><option value="info">Info</option><option value="promo">Promo</option><option value="sale">Oferta</option></select></div>
           <div class="form-group"><label>Título</label><input type="text" id="notif-title" placeholder="¡Nueva colección!" required></div>
           <div class="form-group"><label>Mensaje</label><input type="text" id="notif-body" placeholder="Mira lo nuevo en la tienda"></div>
-          <button type="submit" class="btn btn-gold" style="grid-column:1/-1"><i class="fas fa-paper-plane"></i> Enviar Notificación</button>
+          <button type="submit" class="btn btn-gold"><i class="fas fa-paper-plane"></i> Enviar Notificación</button>
         </form>
       </div>
     </div>
 
     <!-- FAQs -->
     <div class="page-section" id="page-faqs">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <h2 style="font-family:var(--font-d)">Preguntas Frecuentes</h2>
-        <button class="btn btn-gold" onclick="openFAQForm()" style="width:auto"><i class="fas fa-plus"></i> Nueva FAQ</button>
+      <div class="page-toolbar">
+        <h2 class="page-title">Preguntas Frecuentes</h2>
+        <button class="btn btn-gold" onclick="openFAQForm()"><i class="fas fa-plus"></i> Nueva FAQ</button>
       </div>
       <div class="section-card">
-        <div class="table-wrap"><table id="faqs-table"><thead><tr><th>Pregunta</th><th>Respuesta</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="4" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="faqs-table">
+            <thead><tr><th>Pregunta</th><th>Respuesta</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody><tr><td colspan="4" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <!-- REVIEWS -->
     <div class="page-section" id="page-reviews">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <h2 style="font-family:var(--font-d)">Reseñas de Clientes</h2>
+      <div class="page-toolbar">
+        <h2 class="page-title">Reseñas de Clientes</h2>
       </div>
       <div class="section-card">
-        <div class="table-wrap"><table id="reviews-table"><thead><tr><th>Cliente</th><th>Producto</th><th>Rating</th><th>Reseña</th><th>Reportada</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody><tr><td colspan="8" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="reviews-table">
+            <thead><tr><th>Cliente</th><th>Producto</th><th>Rating</th><th>Reseña</th><th>Reportada</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead>
+            <tbody><tr><td colspan="8" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
     <!-- ANALYTICS -->
     <div class="page-section" id="page-analytics">
-      <h2 style="font-family:var(--font-d);margin-bottom:20px">Analíticas de Ventas</h2>
+      <h2 class="page-title">Analíticas de Ventas</h2>
       <div class="section-card">
         <h2>Ventas Mensuales</h2>
-        <div id="sales-chart"><p style="color:var(--text2);text-align:center">Cargando...</p></div>
+        <div id="sales-chart"><p class="muted" style="text-align:center">Cargando...</p></div>
       </div>
       <div class="section-card">
         <h2>Productos Más Vendidos</h2>
-        <div class="table-wrap"><table id="top-products"><thead><tr><th>#</th><th>Producto</th><th>Cantidad</th><th>Ingresos</th></tr></thead><tbody><tr><td colspan="4" style="color:var(--text2)">Cargando...</td></tr></tbody></table></div>
+        <div class="table-wrap">
+          <table id="top-products">
+            <thead><tr><th>#</th><th>Producto</th><th>Cantidad</th><th>Ingresos</th></tr></thead>
+            <tbody><tr><td colspan="4" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -281,7 +371,7 @@
 
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-<!-- PRODUCT MODAL (with variants + images) -->
+<!-- PRODUCT MODAL -->
 <div class="modal-overlay" id="product-modal">
   <div class="modal" style="max-width:700px">
     <button class="close-modal" id="product-cancel-btn">&times;</button>
@@ -298,18 +388,17 @@
         <div class="form-group"><label>Precio Anterior</label><input type="number" step="0.01" id="product-form-old-price"></div>
         <div class="form-group"><label>Stock</label><input type="number" id="product-form-stock" required></div>
         <div class="form-group"><label>Imagen Principal</label>
-          <div style="display:flex;gap:8px">
-            <input type="text" id="product-form-image" placeholder="URL o subí una imagen" style="flex:1">
+          <div class="form-inline">
+            <input type="text" id="product-form-image" placeholder="URL o subí una imagen">
             <label for="main-image-upload-input" class="btn btn-sm btn-gold" style="white-space:nowrap;cursor:pointer;margin:0"><i class="fas fa-upload"></i> Subir</label>
             <input type="file" id="main-image-upload-input" accept="image/*" class="visually-hidden">
           </div>
         </div>
-        <div class="form-group full-width" style="display:flex;gap:12px">
+        <div class="form-group full-width checkbox-row">
           <label><input type="checkbox" id="product-form-featured"> Destacado</label>
         </div>
         <div class="form-group full-width"><label>Descripción</label><textarea id="product-form-description" rows="3"></textarea></div>
 
-        <!-- Variants -->
         <div class="form-group full-width">
           <label>Variantes (Talla/Color)
             <button type="button" class="btn btn-sm btn-gold" id="add-variant-btn" style="margin-left:8px">+ Añadir</button>
@@ -317,7 +406,6 @@
           <div id="variants-container"></div>
         </div>
 
-        <!-- Images -->
         <div class="form-group full-width">
           <div style="margin-bottom:6px"><strong>Galería de Imágenes</strong></div>
           <button type="button" class="btn btn-sm btn-gold" id="add-image-btn" style="margin-right:4px">+ Añadir URL</button>
@@ -328,9 +416,9 @@
 
         <div class="form-group full-width" id="product-image-preview"></div>
       </div>
-      <div style="display:flex;gap:12px;margin-top:8px">
-        <button type="submit" class="btn btn-gold" style="flex:1">Guardar</button>
-        <button type="button" class="btn btn-danger" onclick="closeProductForm()" style="flex:1">Cancelar</button>
+      <div class="modal-actions">
+        <button type="submit" class="btn btn-gold">Guardar</button>
+        <button type="button" class="btn btn-danger" onclick="closeProductForm()">Cancelar</button>
       </div>
     </form>
   </div>
@@ -366,7 +454,7 @@
       <div class="form-group"><label>Slug (URL)</label><input type="text" id="category-slug" placeholder="vestidos"></div>
       <div class="form-group"><label>Descripción</label><textarea id="category-description" rows="3"></textarea></div>
       <div class="form-group"><label>Imagen (URL)</label><input type="text" id="category-image"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-row">
         <div class="form-group"><label>Orden</label><input type="number" id="category-sort" value="0"></div>
         <div class="form-group"><label>Activa</label><select id="category-active"><option value="true">Sí</option><option value="false">No</option></select></div>
       </div>
@@ -385,7 +473,7 @@
       <div class="form-group"><label>Slug (URL)</label><input type="text" id="collection-slug" placeholder="coleccion-2026"></div>
       <div class="form-group"><label>Descripción</label><textarea id="collection-description" rows="3"></textarea></div>
       <div class="form-group"><label>Imagen (URL)</label><input type="text" id="collection-image"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-row">
         <div class="form-group"><label>Destacada</label><select id="collection-featured"><option value="false">No</option><option value="true">Sí</option></select></div>
         <div class="form-group"><label>Activa</label><select id="collection-active"><option value="true">Sí</option><option value="false">No</option></select></div>
       </div>
@@ -403,7 +491,7 @@
       <div class="form-group"><label>Título</label><input type="text" id="banner-title"></div>
       <div class="form-group"><label>Subtítulo</label><input type="text" id="banner-subtitle"></div>
       <div class="form-group"><label>Imagen (URL)</label><input type="text" id="banner-image" required></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-row">
         <div class="form-group"><label>Orden</label><input type="number" id="banner-sort" value="0"></div>
         <div class="form-group"><label>Activo</label><select id="banner-active"><option value="true">Sí</option><option value="false">No</option></select></div>
       </div>

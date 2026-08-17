@@ -4,21 +4,78 @@ const state = {
   products: [], orders: [], messages: [],
   tempToken: null,
   pendingUser: null,
+  recaptchaKey: null,
+  recaptchaReady: false,
 };
 
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 const fmt = n => '$' + Number(n).toFixed(2);
 
+const PAGE_TITLES = {
+  dashboard: 'Dashboard',
+  products: 'Productos',
+  orders: 'Pedidos',
+  chat: 'Chat',
+  messages: 'Mensajes',
+  customers: 'Clientes',
+  catalog: 'Catálogo',
+  marketing: 'Marketing',
+  faqs: 'FAQs',
+  reviews: 'Reseñas',
+  analytics: 'Analíticas',
+};
+
 function showPage(id) {
   $$('.page-section').forEach(p => p.classList.remove('active'));
   const page = document.getElementById(`page-${id}`);
   if (page) page.classList.add('active');
   $$('.sidebar nav a').forEach(a => a.classList.toggle('active', a.dataset.page === id));
-  document.getElementById('page-title').textContent = page?.querySelector('h2')?.textContent || 'Dashboard';
+  const titled = page?.querySelector('.page-title')?.textContent?.trim();
+  document.getElementById('page-title').textContent = titled || PAGE_TITLES[id] || 'Dashboard';
 }
 
 // ===== AUTH =====
+async function loadRecaptchaConfig() {
+  try {
+    const res = await fetch('/api/config/recaptcha');
+    const data = await res.json();
+    if (data.site_key) {
+      state.recaptchaKey = data.site_key;
+      // Load the reCAPTCHA script
+      const script = document.createElement('script');
+      script.src = `https://www.google.com/recaptcha/api.js?render=explicit`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        const container = document.getElementById('recaptcha-container');
+        if (container) {
+          container.style.display = 'block';
+          grecaptcha.render('recaptcha-widget', {
+            sitekey: data.site_key,
+            callback: (token) => { state.recaptchaReady = true; },
+            'expired-callback': () => { state.recaptchaReady = false; },
+            'error-callback': () => { state.recaptchaReady = false; },
+          });
+        }
+      };
+      document.head.appendChild(script);
+    }
+  } catch (err) {
+    // reCAPTCHA config not available — proceed without it
+  }
+}
+
+function getRecaptchaToken() {
+  if (!state.recaptchaKey) return '';
+  if (typeof grecaptcha === 'undefined') return '';
+  try {
+    return grecaptcha.getResponse() || '';
+  } catch {
+    return '';
+  }
+}
+
 async function handleLogin(e) {
   e.preventDefault();
   const email = $('#login-email').value;
@@ -26,14 +83,22 @@ async function handleLogin(e) {
   const errEl = $('#login-error');
   errEl.style.display = 'none';
 
+  // Validate reCAPTCHA if configured
+  const recaptchaToken = getRecaptchaToken();
+  if (state.recaptchaKey && !recaptchaToken) {
+    errEl.textContent = 'Por favor completá la verificación reCAPTCHA.';
+    errEl.style.display = 'block';
+    return;
+  }
+
   const submitBtn = e.target.querySelector('button[type="submit"]');
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Verificando...'; }
 
   try {
-    const res = await api.login(email, password);
+    const res = await api.login(email, password, recaptchaToken);
 
     if (res.requires_2fa) {
-      state.tempToken = res.access_token || null;
+      state.tempToken = res.temp_token || null;
       state.pendingUser = res.user;
       $('#login-page').style.display = 'none';
       $('#twofa-page').style.display = 'flex';
@@ -46,6 +111,9 @@ async function handleLogin(e) {
       errEl.textContent = 'Acceso denegado: no tenés permisos de administrador';
       errEl.style.display = 'block';
       if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Iniciar Sesión'; }
+      if (typeof grecaptcha !== 'undefined' && state.recaptchaKey) {
+        try { grecaptcha.reset(); } catch {}
+      }
       return;
     }
 
@@ -63,6 +131,10 @@ async function handleLogin(e) {
     errEl.textContent = msg;
     errEl.style.display = 'block';
     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Iniciar Sesión'; }
+    // Reset reCAPTCHA so user can try again
+    if (typeof grecaptcha !== 'undefined' && state.recaptchaKey) {
+      try { grecaptcha.reset(); } catch {}
+    }
   }
 }
 
@@ -115,6 +187,10 @@ function logout() {
   $('#admin-app').style.display = 'none';
   $('#login-error').style.display = 'none';
   $('#twofa-error').style.display = 'none';
+  // Reset reCAPTCHA for next login
+  if (typeof grecaptcha !== 'undefined' && state.recaptchaKey) {
+    try { grecaptcha.reset(); } catch {}
+  }
 }
 
 function showAdmin() {
@@ -165,10 +241,13 @@ async function loadDashboard() {
       tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text2)">Sin pedidos recientes</td></tr>';
     }
 
+    const stockEl = $('#low-stock-warning');
     if (data.low_stock > 0) {
-      $('#low-stock-warning').innerHTML = `<i class="fas fa-exclamation-triangle" style="color:var(--warning)"></i> ${data.low_stock} producto(s) con stock bajo`;
+      stockEl.className = 'alert-warn';
+      stockEl.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${data.low_stock} producto(s) con stock bajo`;
     } else {
-      $('#low-stock-warning').innerHTML = '<i class="fas fa-check-circle" style="color:var(--success)"></i> Stock normal';
+      stockEl.className = 'alert-ok';
+      stockEl.innerHTML = '<i class="fas fa-check-circle"></i> Stock normal';
     }
   } catch (err) { console.error(err); }
 }
@@ -220,7 +299,7 @@ async function uploadMainImage() {
   try {
     const res = await api.uploadImage(fileInput.files[0], state.token);
     $('#product-form-image').value = res.url;
-    $('#product-image-preview').innerHTML = `<img src="${res.url}" style="max-width:120px;max-height:120px;object-fit:cover;border:1px solid var(--gray-mid)">`;
+    $('#product-image-preview').innerHTML = `<img src="${res.url}" alt="Vista previa">`;
     fileInput.value = '';
     showToast('Imagen principal subida');
   } catch (err) { showToast(err.message); }
@@ -256,7 +335,7 @@ function openProductForm(data = null) {
 
   // Preview current image
   if (data?.image) {
-    $('#product-image-preview').innerHTML = `<img src="${data.image}" style="max-width:100px;max-height:100px;object-fit:cover">`;
+    $('#product-image-preview').innerHTML = `<img src="${data.image}" alt="Vista previa">`;
   } else {
     $('#product-image-preview').innerHTML = '';
   }
@@ -808,23 +887,23 @@ async function loadAdminChatConversations() {
     const list = $('#admin-chat-list');
 
     if (!convs.length) {
-      list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray);font-size:.75rem">Sin conversaciones activas</div>';
+      list.innerHTML = '<div class="admin-chat-empty">Sin conversaciones activas</div>';
       return;
     }
 
     list.innerHTML = convs.map(c => {
-      const active = c.id === adminChat.currentConvId ? 'background:rgba(201,168,76,.08)' : '';
-      return `<div class="admin-chat-conv" data-id="${c.id}" onclick="selectAdminChat(${c.id})" style="padding:12px 16px;border-bottom:1px solid var(--gray-light);cursor:pointer;transition:background .2s;${active}">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div style="width:36px;height:36px;border-radius:50%;background:var(--gray-light);display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--gray);flex-shrink:0">
+      const active = c.id === adminChat.currentConvId ? 'background:rgba(184,148,31,.08)' : '';
+      return `<div class="admin-chat-conv" data-id="${c.id}" onclick="selectAdminChat(${c.id})" style="padding:14px 16px;border-bottom:1px solid var(--border-light);cursor:pointer;${active}">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:38px;height:38px;border-radius:50%;background:var(--gold-glow);border:1px solid rgba(184,148,31,.15);display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--gold);flex-shrink:0">
             <i class="fas fa-user"></i>
           </div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:.78rem;font-weight:600;display:flex;justify-content:space-between">
+            <div style="font-size:.8rem;font-weight:600;display:flex;justify-content:space-between;gap:8px">
               <span>${escapeHtml(c.guest_name || c.subject || 'Cliente')}</span>
-              ${c.unread_count > 0 ? `<span style="background:var(--danger);color:#fff;font-size:.55rem;padding:1px 7px;border-radius:8px">${c.unread_count}</span>` : ''}
+              ${c.unread_count > 0 ? `<span style="background:var(--danger);color:#fff;font-size:.55rem;padding:2px 7px;border-radius:999px;font-weight:700">${c.unread_count}</span>` : ''}
             </div>
-            <div style="font-size:.65rem;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(c.last_message || '')}</div>
+            <div style="font-size:.68rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px">${escapeHtml(c.last_message || '')}</div>
           </div>
         </div>
       </div>`;
@@ -864,10 +943,10 @@ async function loadAdminChatMessages(convId) {
     container.innerHTML = msgs.map(m => {
       const isAdmin = m.is_admin;
       return `<div style="display:flex;${isAdmin ? 'justify-content:flex-end' : 'justify-content:flex-start'};margin-bottom:12px">
-        <div style="max-width:75%;${isAdmin ? 'background:var(--gold);color:#fff' : 'background:#fff;border:1px solid var(--gray-mid)'};padding:10px 14px;border-radius:12px;${isAdmin ? 'border-bottom-right-radius:4px' : 'border-bottom-left-radius:4px'}">
-          <div style="font-size:.65rem;font-weight:600;margin-bottom:2px;${isAdmin ? 'opacity:.7;text-align:right' : 'color:var(--gray)'}">${isAdmin ? 'Tú' : escapeHtml(m.sender_name || 'Cliente')}</div>
-          <div style="font-size:.82rem">${escapeHtml(m.message)}</div>
-          <div style="font-size:.6rem;${isAdmin ? 'opacity:.5;text-align:right' : 'color:var(--gray)'};margin-top:4px">${m.created_at ? new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : ''}</div>
+        <div style="max-width:75%;${isAdmin ? 'background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#fff' : 'background:#fff;border:1px solid var(--border)'};padding:11px 14px;border-radius:14px;${isAdmin ? 'border-bottom-right-radius:4px' : 'border-bottom-left-radius:4px'};box-shadow:var(--shadow)">
+          <div style="font-size:.65rem;font-weight:600;margin-bottom:3px;${isAdmin ? 'opacity:.75;text-align:right' : 'color:var(--text2)'}">${isAdmin ? 'Tú' : escapeHtml(m.sender_name || 'Cliente')}</div>
+          <div style="font-size:.84rem;line-height:1.45">${escapeHtml(m.message)}</div>
+          <div style="font-size:.6rem;${isAdmin ? 'opacity:.55;text-align:right' : 'color:var(--text3)'};margin-top:5px">${m.created_at ? new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : ''}</div>
         </div>
       </div>`;
     }).join('');
@@ -933,19 +1012,13 @@ async function loadTopProducts() {
 // ===== TOAST =====
 function showToast(msg) {
   document.querySelector('.admin-toast')?.remove();
-  let el = document.createElement('div');
+  const el = document.createElement('div');
   el.className = 'admin-toast';
   el.innerHTML = `<span style="width:6px;height:6px;border-radius:50%;background:var(--gold);flex-shrink:0"></span>${msg}`;
-  Object.assign(el.style, {
-    position: 'fixed', bottom: '24px', right: '24px', zIndex: '9999',
-    background: 'var(--black)', color: '#fff', padding: '12px 20px',
-    fontFamily: 'var(--body)', fontSize: '.75rem', display: 'flex',
-    alignItems: 'center', gap: '10px', letterSpacing: '.5px',
-    borderTop: '2px solid var(--gold)', opacity: '0',
-    transition: 'opacity .35s', boxShadow: '0 8px 30px rgba(0,0,0,.3)',
-  });
+  el.style.opacity = '0';
+  el.style.transition = 'opacity .35s cubic-bezier(0.22, 1, 0.36, 1)';
   document.body.appendChild(el);
-  requestAnimationFrame(() => el.style.opacity = '1');
+  requestAnimationFrame(() => { el.style.opacity = '1'; });
   setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 350); }, 2500);
 }
 
@@ -1016,6 +1089,9 @@ document.addEventListener('DOMContentLoaded', () => {
     api.me(state.token).then(() => showAdmin()).catch(() => {
       localStorage.removeItem('token'); localStorage.removeItem('user');
     });
+  } else {
+    // Load reCAPTCHA config for login page
+    loadRecaptchaConfig();
   }
 
   // Mobile sidebar drawer
@@ -1029,4 +1105,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   if (overlay) overlay.addEventListener('click', closeSidebar);
   $$('.sidebar nav a').forEach(a => a.addEventListener('click', closeSidebar));
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 1100) closeSidebar();
+  });
 });
