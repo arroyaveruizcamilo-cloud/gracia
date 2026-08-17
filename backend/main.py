@@ -315,36 +315,26 @@ async def lifespan(app: FastAPI):
 
 def _migrate_runtime():
     """Agrega columnas nuevas a tablas existentes sin romper la DB (SQLite y Postgres)."""
-    from sqlalchemy import text, inspect
-    with engine.connect() as conn:
-        inspector = inspect(conn)
-        tables = set(inspector.get_table_names())
+    from sqlalchemy import text
+    from sqlalchemy.exc import ProgrammingError
 
-        if "conversations" in tables:
-            cols = {c["name"] for c in inspector.get_columns("conversations")}
-            if "guest_token" not in cols:
-                with engine.begin() as conn2:
-                    conn2.execute(text("ALTER TABLE conversations ADD COLUMN guest_token VARCHAR(128)"))
+    migrations = [
+        ("conversations", "guest_token", "VARCHAR(128)"),
+        ("orders", "stock_released", "BOOLEAN DEFAULT 0"),
+        ("users", "two_factor_secret", "VARCHAR(64) DEFAULT ''"),
+        ("users", "failed_login_attempts", "INTEGER DEFAULT 0"),
+        ("users", "locked_until", "DATETIME"),
+        ("users", "last_login_at", "DATETIME"),
+        ("users", "last_login_ip", "VARCHAR(50) DEFAULT ''"),
+    ]
 
-        if "orders" in tables:
-            cols = {c["name"] for c in inspector.get_columns("orders")}
-            if "stock_released" not in cols:
-                with engine.begin() as conn2:
-                    conn2.execute(text("ALTER TABLE orders ADD COLUMN stock_released BOOLEAN DEFAULT 0"))
-
-        if "users" in tables:
-            cols = {c["name"] for c in inspector.get_columns("users")}
-            new_user_cols = {
-                "two_factor_secret": "VARCHAR(64) DEFAULT ''",
-                "failed_login_attempts": "INTEGER DEFAULT 0",
-                "locked_until": "DATETIME",
-                "last_login_at": "DATETIME",
-                "last_login_ip": "VARCHAR(50) DEFAULT ''",
-            }
-            for col_name, col_def in new_user_cols.items():
-                if col_name not in cols:
-                    with engine.begin() as conn2:
-                        conn2.execute(text(f"ALTER TABLE users ADD COLUMN {col_name} {col_def}"))
+    for table, column, col_def in migrations:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}"))
+            logger.info(f"Migrated: added {table}.{column}")
+        except ProgrammingError:
+            pass  # Column already exists
 
 
 fastapi_app.router.lifespan_context = lifespan
