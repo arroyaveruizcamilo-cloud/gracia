@@ -431,7 +431,19 @@ function addToCart(pid) {
   save('cart');
   updateCartUI();
   renderCartItems();
-  showToast(`${p.name} añadido`);
+  
+  // Animated toast
+  showToast(`✨ ${p.name} añadido al carrito`);
+  
+  // Open cart with animation
+  const cartBtn = document.getElementById('cart-btn');
+  if (cartBtn) {
+    cartBtn.style.animation = 'none';
+    setTimeout(() => {
+      cartBtn.style.animation = 'pulse 0.6s var(--ease) 2';
+    }, 10);
+  }
+  
   updateCartFooter();
 
   // Sync with server if logged in
@@ -441,17 +453,48 @@ function addToCart(pid) {
 }
 
 function removeCartItem(id) {
-  state.cart = state.cart.filter(i => i.id !== id);
-  save('cart');
-  updateCartUI();
-  renderCartItems();
-  if (isLoggedIn()) api.removeCartItem(id, state.token).catch(() => {});
+  // Animate item removal
+  const itemEl = document.querySelector(`[data-cart-id="${id}"]`);
+  if (itemEl) {
+    itemEl.style.animation = 'fadeOut 0.4s var(--ease) forwards';
+    setTimeout(() => {
+      state.cart = state.cart.filter(i => i.id !== id);
+      save('cart');
+      updateCartUI();
+      renderCartItems();
+      showToast(`✓ Producto removido del carrito`);
+      if (isLoggedIn()) api.removeCartItem(id, state.token).catch(() => {});
+    }, 400);
+  } else {
+    state.cart = state.cart.filter(i => i.id !== id);
+    save('cart');
+    updateCartUI();
+    renderCartItems();
+    if (isLoggedIn()) api.removeCartItem(id, state.token).catch(() => {});
+  }
 }
 
 function updateQty(id, delta) {
   const item = state.cart.find(i => i.id === id);
   if (!item) return;
+  
+  const oldQty = item.qty;
   item.qty = Math.max(1, Math.min(item.qty + delta, 99));
+  
+  // Animate quantity change
+  if (item.qty !== oldQty) {
+    const itemEl = document.querySelector(`[data-cart-id="${id}"]`);
+    if (itemEl) {
+      const qtyEl = itemEl.querySelector('.qty-value');
+      if (qtyEl) {
+        qtyEl.style.animation = 'none';
+        setTimeout(() => {
+          qtyEl.style.animation = 'pulse 0.4s var(--ease)';
+        }, 10);
+      }
+    }
+  }
+  
   save('cart');
   renderCartItems();
   updateCartFooter();
@@ -472,17 +515,17 @@ function renderCartItems() {
     return;
   }
   container.innerHTML = state.cart.map(i => `
-    <div class="cart-item">
+    <div class="cart-item" data-cart-id="${i.id}">
       <img src="${i.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200'}" alt="${escapeHtml(i.name)}">
       <div class="cart-item-details">
         <h4>${escapeHtml(i.name)}</h4>
         <div class="price">${fmt(i.price)}</div>
         <div class="cart-item-qty">
-          <button onclick="updateQty(${i.id}, -1)">-</button>
-          <span>${i.qty}</span>
-          <button onclick="updateQty(${i.id}, 1)">+</button>
+          <button class="qty-btn" onclick="updateQty(${i.id}, -1)">−</button>
+          <span class="qty-value">${i.qty}</span>
+          <button class="qty-btn" onclick="updateQty(${i.id}, 1)">+</button>
         </div>
-        <button class="cart-item-remove" onclick="removeCartItem(${i.id})">Eliminar</button>
+        <button class="cart-item-remove" onclick="removeCartItem(${i.id})">✕ Eliminar</button>
       </div>
     </div>
   `).join('');
@@ -1334,16 +1377,36 @@ document.addEventListener('DOMContentLoaded', () => {
   // Mobile menu
   $('#mobile-menu-btn')?.addEventListener('click', () => $('#header-nav')?.classList.toggle('open'));
   $$('.header-nav a').forEach(a => a.addEventListener('click', () => $('#header-nav')?.classList.remove('open')));
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 992) $('#header-nav')?.classList.remove('open');
+  });
 
   // Cart
   $('#cart-btn')?.addEventListener('click', () => {
-    $('#cart-overlay').classList.add('open');
-    $('#cart-sidebar').classList.add('open');
+    const overlay = $('#cart-overlay');
+    const sidebar = $('#cart-sidebar');
+    overlay.classList.add('open');
+    sidebar.classList.add('open');
+    
+    // Trigger animation
+    sidebar.style.animation = 'none';
+    setTimeout(() => {
+      sidebar.style.animation = '';
+    }, 10);
+    
     renderCartItems();
     updateCartFooter();
   });
-  $('#cart-overlay')?.addEventListener('click', () => { $('#cart-overlay').classList.remove('open'); $('#cart-sidebar').classList.remove('open'); });
-  $('#cart-close')?.addEventListener('click', () => { $('#cart-overlay').classList.remove('open'); $('#cart-sidebar').classList.remove('open'); });
+  $('#cart-overlay')?.addEventListener('click', (e) => { 
+    if (e.target === $('#cart-overlay')) {
+      $('#cart-overlay').classList.remove('open'); 
+      $('#cart-sidebar').classList.remove('open'); 
+    }
+  });
+  $('#cart-close')?.addEventListener('click', () => { 
+    $('#cart-overlay').classList.remove('open'); 
+    $('#cart-sidebar').classList.remove('open'); 
+  });
   $('#checkout-btn')?.addEventListener('click', openCheckout);
 
   // Coupon
