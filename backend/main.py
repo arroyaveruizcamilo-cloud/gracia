@@ -117,6 +117,16 @@ def serve_reset_password():
     return FileResponse(FRONTEND_DIR / "index.html")
 
 
+@fastapi_app.get("/legal/privacidad")
+def serve_privacidad():
+    return FileResponse(FRONTEND_DIR / "legal" / "privacidad.html")
+
+
+@fastapi_app.get("/legal/terminos")
+def serve_terminos():
+    return FileResponse(FRONTEND_DIR / "legal" / "terminos.html")
+
+
 SITE_URL = os.getenv("FRONTEND_URL", "https://graciaclothing.com").rstrip("/")
 
 

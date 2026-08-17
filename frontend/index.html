@@ -9,7 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="/frontend/css/styles.css">
+  <link rel="stylesheet" href="/frontend/css/styles.css">
+  <link rel="stylesheet" href="/frontend/css/cookie-consent.css">
 <link rel="manifest" href="/frontend/manifest.json">
 <meta name="theme-color" content="#111111">
 <meta property="og:site_name" content="Gracia Clothing">
@@ -44,29 +45,10 @@ window.GRACIA_CONFIG = { GA_ID: '', META_PIXEL_ID: '' };
     const res = await fetch('/api/config');
     const cfg = await res.json();
     window.GRACIA_CONFIG = cfg || window.GRACIA_CONFIG;
-    if (cfg && cfg.GA_ID && cfg.GA_ID.startsWith('G-')) {
-      const s = document.createElement('script');
-      s.defer = true; s.src = 'https://www.googletagmanager.com/gtag/js?id=' + cfg.GA_ID;
-      s.onload = () => {
-        window.dataLayer = window.dataLayer || [];
-        function gtag() { dataLayer.push(arguments); }
-        gtag('js', new Date()); gtag('config', cfg.GA_ID);
-      };
-      document.head.appendChild(s);
-    }
-    if (cfg && cfg.META_PIXEL_ID && cfg.META_PIXEL_ID.length === 15) {
-      !function (f, b, e, v, n, t, s) {
-        if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments) };
-        if (!f._fbq) f._fbq = n; n.push = n; n.loaded = true; n.version = '2.0';
-        n.queue = []; t = b.createElement(e); t.async = true; t.src = v;
-        s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s);
-      }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', cfg.META_PIXEL_ID); fbq('track', 'PageView');
-    }
+    window.__GA_ID__ = cfg.GA_ID || '';
+    window.__META_PIXEL_ID__ = cfg.META_PIXEL_ID || '';
   } catch (e) {}
 })();
-</script>
-<script>
 window.dataLayer = window.dataLayer || [];
 function gtag() { dataLayer.push(arguments); }
 </script>
@@ -476,8 +458,11 @@ function gtag() { dataLayer.push(arguments); }
       <h4>Ayuda</h4>
       <a href="#" onclick="event.preventDefault();showPage('track');return false">Seguimiento de pedido</a>
       <a href="#" onclick="event.preventDefault();showPage('store');return false">Preguntas frecuentes</a>
-      <a href="#">Politica de envios</a>
-      <a href="#">Devoluciones</a>
+      <a href="/legal/terminos">Politica de envios</a>
+      <a href="/legal/terminos">Devoluciones</a>
+      <a href="/legal/privacidad">Politica de Privacidad</a>
+      <a href="/legal/terminos">Terminos y Condiciones</a>
+      <a href="#" onclick="event.preventDefault();openCookieSettings();return false">Configurar Cookies</a>
     </div>
     <div>
       <h4>Contacto</h4>
@@ -671,6 +656,7 @@ function gtag() { dataLayer.push(arguments); }
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="/frontend/js/api.js"></script>
 <script src="/frontend/js/script.js"></script>
+<script src="/frontend/js/cookie-consent.js"></script>
 
 <script>
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }

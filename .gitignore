@@ -10,6 +10,7 @@ build/
 # Environment
 .env
 .env.local
+backend/.env
 
 # Database
 *.db
