@@ -153,8 +153,9 @@ const api = {
   adminCloseConversation(id, t) { return this.request('POST', `/chat/admin/conversations/${id}/close`, null, t); },
   adminMarkRead(id, t) { return this.request('POST', `/chat/admin/conversations/${id}/read`, null, t); },
 
-  // Payments
-  createPreference(d) { return this.request('POST', '/payments/create-preference', d); },
+  // Payments (Wompi)
+  createWompiTransaction(d) { return this.request('POST', '/payments/wompi/create', d); },
+  getWompiStatus(id) { return this.request('GET', `/payments/wompi/status/${id}`); },
   simulatePayment(id, t) { return this.request('POST', `/payments/simulate/${id}`, null, t); },
   getPaymentMethods() { return this.request('GET', '/payments/methods'); },
   getPaymentStatus(id, t) { return this.request('GET', `/payments/status/${id}`, null, t); },

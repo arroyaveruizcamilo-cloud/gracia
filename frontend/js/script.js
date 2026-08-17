@@ -704,11 +704,12 @@ async function renderWishlist() {
 // ===== PAYMENT REDIRECT HANDLER =====
 (function handlePaymentRedirect() {
   const params = new URLSearchParams(window.location.search);
-  const payment = params.get('payment');
+  const payment = params.get('payment') || params.get('payment_result');
   const orderId = params.get('order_id');
   if (payment && orderId) {
     const url = new URL(window.location);
     url.searchParams.delete('payment');
+    url.searchParams.delete('payment_result');
     url.searchParams.delete('order_id');
     window.history.replaceState({}, '', url);
 
@@ -718,7 +719,7 @@ async function renderWishlist() {
         if (data.payment_status === 'Pagado') {
           showSuccessView(orderId, data.total, data.payment_method, data.customer_email);
           $('#checkout-modal').classList.add('open');
-        } else if (payment === 'failure') {
+        } else if (payment === 'failure' || payment === 'error') {
           $('#checkout-modal').classList.add('open');
           showCheckoutView('error');
           document.getElementById('cs-error-message').textContent =
@@ -731,7 +732,7 @@ async function renderWishlist() {
         }
       })
       .catch(() => {
-        if (payment === 'success') {
+        if (payment === 'success' || payment === 'redirect') {
           showToast(`¡Pedido #${orderId} creado! Te confirmaremos por email.`);
         } else {
           showToast(`El pago del pedido #${orderId} no se completó.`);
@@ -913,23 +914,25 @@ async function submitOrder() {
       return;
     }
 
-    const pref = await api.createPreference({ order_id: order.order_id, payment_method: selectedMethod });
+    const pref = await api.createWompiTransaction({ order_id: order.order_id, payment_method: selectedMethod });
 
-    if (pref.status === 'simulated' || (!pref.init_point && !pref.sandbox_init_point)) {
+    if (pref.status === 'simulated') {
       await api.simulatePayment(order.order_id, state.token);
       showSuccessView(order.order_id, total - disc, selectedMethod, email);
-    } else {
-      const redirectUrl = pref.init_point || pref.sandbox_init_point;
+    } else if (pref.redirect_url) {
       showCheckoutStep(3);
       if (loader) loader.innerHTML = `
         <div class="cr-spinner"></div>
-        <h3>Redirigiendo a MercadoPago...</h3>
-        <p>Serás redirigido al entorno seguro de MercadoPago para completar el pago.</p>
-        <button class="btn btn-gold" style="margin-top:20px" onclick="window.location.href='${redirectUrl}'">
+        <h3>Redirigiendo a Wompi...</h3>
+        <p>Serás redirigido al entorno seguro de Wompi para completar el pago.</p>
+        <button class="btn btn-gold" style="margin-top:20px" onclick="window.location.href='${pref.redirect_url}'">
           Ir a pagar ahora
         </button>
       `;
-      setTimeout(() => { window.location.href = redirectUrl; }, 1500);
+      setTimeout(() => { window.location.href = pref.redirect_url; }, 1500);
+    } else {
+      await api.simulatePayment(order.order_id, state.token);
+      showSuccessView(order.order_id, total - disc, selectedMethod, email);
     }
 
     state.cart = []; state.coupon = null;

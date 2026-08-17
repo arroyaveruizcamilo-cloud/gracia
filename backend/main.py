@@ -32,7 +32,7 @@ if SENTRY_DSN and sentry_sdk:
 
 from routers import (
     auth, products, orders, analytics, messages, users, coupons,
-    faqs, payments, upload, chat, admin, banners, reviews,
+    faqs, payments, wompi, upload, chat, admin, banners, reviews,
 )
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
@@ -252,6 +252,7 @@ fastapi_app.include_router(coupons.router, prefix="/api")
 fastapi_app.include_router(faqs.router, prefix="/api")
 fastapi_app.include_router(orders.router, prefix="/api")
 fastapi_app.include_router(payments.router, prefix="/api")
+fastapi_app.include_router(wompi.router, prefix="/api")
 fastapi_app.include_router(products.router, prefix="/api")
 fastapi_app.include_router(users.router, prefix="/api")
 fastapi_app.include_router(messages.router, prefix="/api")
@@ -396,7 +397,7 @@ def seed_faqs(db):
         {"question": "¿Cuánto tiempo tarda el envío?", "answer": "Los envíos tardan entre 3-7 días hábiles dependiendo de tu ubicación.", "category": "envíos"},
         {"question": "¿Aceptan devoluciones?", "answer": "Sí, aceptamos devoluciones dentro de los primeros 15 días. El producto debe estar en su estado original con etiquetas.", "category": "devoluciones"},
         {"question": "¿Cómo sé mi talla?", "answer": "Puedes consultar nuestra guía de tallas en la página de cada producto. Si tienes dudas, contáctanos por WhatsApp.", "category": "productos"},
-        {"question": "¿Qué métodos de pago aceptan?", "answer": "Aceptamos Tarjeta Débito/Crédito (Visa, Mastercard, Amex), PSE (Bancolombia, Davivienda, Caja Social), Nequi, Daviplata, Llave Davivienda y SisteCrédito. Todos los pagos son procesados de forma segura por MercadoPago.", "category": "pagos"},
+        {"question": "¿Qué métodos de pago aceptan?", "answer": "Aceptamos Tarjeta Débito/Crédito (Visa, Mastercard, Amex), PSE (Bancolombia, Davivienda, Caja Social), Nequi, Daviplata, Llave Davivienda y SisteCrédito. Todos los pagos son procesados de forma segura por Wompi (Bancolombia).", "category": "pagos"},
         {"question": "¿Hacen envíos internacionales?", "answer": "Por el momento solo realizamos envíos dentro del país. Pronto expandiremos.", "category": "envíos"},
     ]
     for f in faqs_data:
