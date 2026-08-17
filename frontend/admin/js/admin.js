@@ -24,7 +24,57 @@ const PAGE_TITLES = {
   faqs: 'FAQs',
   reviews: 'Reseñas',
   analytics: 'Analíticas',
+  security: 'Seguridad',
 };
+
+// ===== AUTO-LOGOUT POR INACTIVIDAD (30 min) =====
+const SESSION_TIMEOUT_MS = (parseInt(sessionStorage.getItem('session_timeout') || '0') || 30) * 60 * 1000;
+let _inactivityTimer = null;
+let _warningTimer = null;
+
+function resetInactivityTimer() {
+  clearTimeout(_inactivityTimer);
+  clearTimeout(_warningTimer);
+
+  // Warning at 25 minutes
+  _warningTimer = setTimeout(() => {
+    if (state.token) {
+      const remaining = Math.ceil((SESSION_TIMEOUT_MS - 25 * 60 * 1000) / 60000);
+      const toast = document.createElement('div');
+      toast.className = 'admin-toast';
+      toast.id = 'session-warning-toast';
+      toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;background:var(--warning);color:#000;padding:14px 28px;border-radius:10px;font-size:.85rem;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px;animation:fadeIn .3s ease';
+      toast.innerHTML = `<i class="fas fa-clock"></i> Tu sesión expira en ${remaining} min por inactividad. <button onclick="this.parentElement.remove();resetInactivityTimer()" style="background:#000;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-weight:700;font-size:.75rem">Extender</button>`;
+      document.body.appendChild(toast);
+    }
+  }, SESSION_TIMEOUT_MS - 5 * 60 * 1000); // 5 min before expiry
+
+  // Auto-logout
+  _inactivityTimer = setTimeout(() => {
+    if (state.token) {
+      document.getElementById('session-warning-toast')?.remove();
+      showToast('Sesión expirada por inactividad');
+      setTimeout(() => logout(), 1000);
+    }
+  }, SESSION_TIMEOUT_MS);
+}
+
+function startInactivityTracking() {
+  ['click', 'keydown', 'mousemove', 'scroll', 'touchstart'].forEach(evt => {
+    document.addEventListener(evt, resetInactivityTimer, { passive: true });
+  });
+  resetInactivityTimer();
+}
+
+function stopInactivityTracking() {
+  clearTimeout(_inactivityTimer);
+  clearTimeout(_warningTimer);
+  document.removeEventListener('click', resetInactivityTimer);
+  document.removeEventListener('keydown', resetInactivityTimer);
+  document.removeEventListener('mousemove', resetInactivityTimer);
+  document.removeEventListener('scroll', resetInactivityTimer);
+  document.removeEventListener('touchstart', resetInactivityTimer);
+}
 
 function showPage(id) {
   $$('.page-section').forEach(p => p.classList.remove('active'));
@@ -182,6 +232,7 @@ function backToLogin() {
 function logout() {
   state.token = null; state.user = null; state.tempToken = null; state.pendingUser = null;
   localStorage.removeItem('token'); localStorage.removeItem('user');
+  stopInactivityTracking();
   $('#login-page').style.display = 'flex';
   $('#twofa-page').style.display = 'none';
   $('#admin-app').style.display = 'none';
@@ -201,6 +252,7 @@ function showAdmin() {
   loadCoupons(); loadFAQs(); loadAdminReviews();
   initAdminSocket();
   loadAdminChatConversations();
+  startInactivityTracking();
 
   // Poll for new conversations
   setInterval(() => {
@@ -1009,6 +1061,35 @@ async function loadTopProducts() {
   } catch (err) { console.error(err); }
 }
 
+// ===== SECURITY / ACTIVITY LOG =====
+async function loadActivityLog() {
+  try {
+    const logs = await api.adminGetActivityLog(state.token);
+    const tbody = $('#activity-log-table tbody');
+    if (!logs.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text2)">Sin actividad registrada</td></tr>'; return; }
+    tbody.innerHTML = logs.map(l => {
+      const actionColor = l.action.includes('fail') || l.action.includes('block') || l.action.includes('delete')
+        ? 'var(--danger)'
+        : l.action.includes('login') || l.action.includes('success')
+          ? 'var(--success)' : 'var(--text2)';
+      const actionIcon = l.action.includes('login') ? 'fa-right-to-bracket'
+        : l.action.includes('fail') ? 'fa-triangle-exclamation'
+        : l.action.includes('block') ? 'fa-ban'
+        : l.action.includes('delete') ? 'fa-trash'
+        : l.action.includes('create') || l.action.includes('register') ? 'fa-plus'
+        : l.action.includes('update') || l.action.includes('edit') ? 'fa-pen'
+        : 'fa-circle-info';
+      return `<tr>
+        <td><span style="display:inline-flex;align-items:center;gap:6px"><i class="fas ${actionIcon}" style="color:${actionColor};font-size:.8rem"></i> ${escapeHtml(l.action)}</span></td>
+        <td>${escapeHtml(l.entity_type || '—')}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(l.details || '')}">${escapeHtml(l.details || '—')}</td>
+        <td><code style="font-size:.75rem;background:var(--bg3);padding:2px 8px;border-radius:4px">${escapeHtml(l.ip_address || '—')}</code></td>
+        <td style="font-size:.78rem;color:var(--text2)">${l.created_at ? new Date(l.created_at).toLocaleString('es-CO', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—'}</td>
+      </tr>`;
+    }).join('');
+  } catch (err) { console.error(err); }
+}
+
 // ===== TOAST =====
 function showToast(msg) {
   document.querySelector('.admin-toast')?.remove();
@@ -1068,6 +1149,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (page === 'faqs') { loadFAQs(); }
       if (page === 'reviews') { loadAdminReviews(); }
       if (page === 'analytics') { loadSalesChart(); loadTopProducts(); }
+      if (page === 'security') { loadActivityLog(); }
     });
   });
 

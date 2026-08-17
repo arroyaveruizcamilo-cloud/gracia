@@ -272,6 +272,7 @@
       <a href="#" data-page="faqs"><i class="fas fa-question-circle"></i><span>FAQs</span></a>
       <a href="#" data-page="reviews"><i class="fas fa-star"></i><span>Reseñas</span></a>
       <a href="#" data-page="analytics"><i class="fas fa-chart-bar"></i><span>Analíticas</span></a>
+      <a href="#" data-page="security"><i class="fas fa-shield-halved"></i><span>Seguridad</span></a>
     </nav>
     <div class="sidebar-footer">
       <button class="btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span>Cerrar Sesión</span></button>
@@ -556,6 +557,53 @@
           <table id="top-products">
             <thead><tr><th>#</th><th>Producto</th><th>Cantidad</th><th>Ingresos</th></tr></thead>
             <tbody><tr><td colspan="4" class="muted">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECURITY -->
+    <div class="page-section" id="page-security">
+      <h2 class="page-title">Seguridad y Actividad</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-shield-halved"></i></div>
+          <div class="stat-body">
+            <div class="stat-value" style="font-size:.9rem">Activo</div>
+            <div class="stat-label">reCAPTCHA v2</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-lock"></i></div>
+          <div class="stat-body">
+            <div class="stat-value" style="font-size:.9rem">5 / 30m</div>
+            <div class="stat-label">Bloqueo (intentos/min)</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-clock"></i></div>
+          <div class="stat-body">
+            <div class="stat-value" style="font-size:.9rem">30 min</div>
+            <div class="stat-label">Auto-logout</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon"><i class="fas fa-key"></i></div>
+          <div class="stat-body">
+            <div class="stat-value" style="font-size:.9rem">JWT + bcrypt</div>
+            <div class="stat-label">Cifrado</div>
+          </div>
+        </div>
+      </div>
+      <div class="section-card">
+        <div class="section-card-header">
+          <h2>Registro de Actividad</h2>
+          <button class="btn btn-sm btn-outline" onclick="loadActivityLog()"><i class="fas fa-refresh"></i> Actualizar</button>
+        </div>
+        <div class="table-wrap">
+          <table id="activity-log-table">
+            <thead><tr><th>Acción</th><th>Tipo</th><th>Detalles</th><th>IP</th><th>Fecha</th></tr></thead>
+            <tbody><tr><td colspan="5" class="muted">Cargando...</td></tr></tbody>
           </table>
         </div>
       </div>

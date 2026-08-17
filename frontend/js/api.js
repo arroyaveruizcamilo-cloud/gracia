@@ -74,6 +74,9 @@ const api = {
   adminGetReviews(t) { return this.request('GET', '/admin/reviews', null, t); },
   adminToggleReview(rid, t) { return this.request('POST', `/admin/reviews/${rid}/toggle-approve`, null, t); },
 
+  // Admin Activity Log
+  adminGetActivityLog(t) { return this.request('GET', '/admin/activity-log', null, t); },
+
   // Admin Products (incluye inactivos)
   getAdminProducts(t) { return this.request('GET', '/admin/products', null, t); },
   adminActivateProduct(pid, t) { return this.request('POST', `/admin/products/${pid}/activate`, null, t); },
