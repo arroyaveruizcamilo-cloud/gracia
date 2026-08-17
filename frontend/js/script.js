@@ -507,6 +507,49 @@ function updateCartUI() {
   $$('.cart-count').forEach(el => { el.textContent = count; el.style.display = count > 0 ? 'flex' : 'none'; });
   const floatCount = $('#cart-float-count');
   if (floatCount) { floatCount.textContent = count; floatCount.style.display = count > 0 ? 'flex' : 'none'; }
+  renderMiniCart();
+}
+
+// ===== MINI CART DROPDOWN =====
+function toggleMiniCart(e) {
+  e.stopPropagation();
+  const dd = $('#mini-cart-dropdown');
+  if (dd.classList.contains('open')) { dd.classList.remove('open'); return; }
+  renderMiniCart();
+  dd.classList.add('open');
+}
+
+function renderMiniCart() {
+  const itemsEl = $('#mini-cart-items');
+  const footerEl = $('#mini-cart-footer');
+  const countEl = $('#mini-cart-count');
+  const totalEl = $('#mini-cart-total-amount');
+  if (!itemsEl) return;
+
+  const count = state.cart.reduce((s, i) => s + i.qty, 0);
+  if (countEl) countEl.textContent = count + ' items';
+
+  if (!state.cart.length) {
+    itemsEl.innerHTML = '<div class="mini-cart-empty"><i class="fa-regular fa-bag-shopping"></i>Tu carrito esta vacio</div>';
+    if (footerEl) footerEl.style.display = 'none';
+    return;
+  }
+
+  itemsEl.innerHTML = state.cart.map(i => `
+    <div class="mini-cart-item">
+      <img src="${i.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200'}" alt="${escapeHtml(i.name)}">
+      <div class="mini-cart-item-info">
+        <h5>${escapeHtml(i.name)}</h5>
+        <div class="mini-cart-item-meta">Cant: ${i.qty}</div>
+        <div class="mini-cart-item-price">${fmt(i.price * i.qty)}</div>
+      </div>
+    </div>
+  `).join('');
+
+  if (footerEl) {
+    footerEl.style.display = 'block';
+    if (totalEl) totalEl.textContent = fmt(cartTotal());
+  }
 }
 
 function renderCartItems() {
@@ -1395,7 +1438,14 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCartFooter();
   };
   $('#cart-btn')?.addEventListener('click', openCartSidebar);
-  $('#cart-float-btn')?.addEventListener('click', openCartSidebar);
+  $('#cart-float-btn')?.addEventListener('click', toggleMiniCart);
+  document.addEventListener('click', (e) => {
+    const dd = $('#mini-cart-dropdown');
+    const btn = $('#cart-float-btn');
+    if (dd && dd.classList.contains('open') && !dd.contains(e.target) && !btn?.contains(e.target)) {
+      dd.classList.remove('open');
+    }
+  });
   $('#cart-overlay')?.addEventListener('click', (e) => { 
     if (e.target === $('#cart-overlay')) {
       $('#cart-overlay').classList.remove('open'); 
