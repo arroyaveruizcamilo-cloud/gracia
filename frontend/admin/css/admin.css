@@ -72,6 +72,30 @@ button, a, input, select, textarea { touch-action: manipulation; }
     radial-gradient(ellipse 70% 50% at 85% 75%, rgba(184, 148, 31, 0.1), transparent 50%),
     linear-gradient(160deg, #0f0e0c 0%, #1a1814 45%, #12100e 100%);
 }
+.login-back-link {
+  position: absolute;
+  top: 28px;
+  left: 28px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 50%;
+  color: rgba(255,255,255,0.7);
+  font-size: 16px;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+.login-back-link:hover {
+  background: rgba(255,255,255,0.15);
+  color: var(--gold-light);
+  border-color: var(--gold-light);
+  transform: scale(1.08);
+}
 .login-page::before {
   content: '';
   position: absolute;
