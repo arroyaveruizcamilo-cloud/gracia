@@ -53,19 +53,19 @@ window.dataLayer = window.dataLayer || [];
 function gtag() { dataLayer.push(arguments); }
 </script>
 <style>
-.topbar{background:linear-gradient(90deg, var(--text), #1a1a2e, var(--text));color:#fff;text-align:center;padding:.6rem 1rem;font-size:.54rem;letter-spacing:3.5px;text-transform:uppercase;font-weight:400;position:relative;overflow:hidden}
-.topbar::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.06),transparent);animation:topbarShimmer 6s ease-in-out infinite}
+.topbar{background:linear-gradient(90deg, #000, #111, #000);color:#fff;text-align:center;padding:.6rem 1rem;font-size:.54rem;letter-spacing:3.5px;text-transform:uppercase;font-weight:400;position:relative;overflow:hidden}
+.topbar::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.04),transparent);animation:topbarShimmer 6s ease-in-out infinite}
 @keyframes topbarShimmer{0%,100%{transform:translateX(-100%)}50%{transform:translateX(100%)}}
-.topbar span{color:var(--gold);font-weight:500}
+.topbar span{color:#fff;font-weight:600}
 .trust-bar{display:flex;justify-content:center;align-items:center;gap:2.5rem;padding:22px 40px;border-bottom:1px solid var(--border-light);background:var(--bg2);flex-wrap:wrap}
 .trust-item{display:flex;align-items:center;gap:10px;font-size:.58rem;letter-spacing:1.8px;text-transform:uppercase;color:var(--text2);font-weight:500;transition:color .3s ease}
-.trust-item i{color:var(--gold);font-size:.8rem;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(212,175,55,0.08);flex-shrink:0;transition:all .3s ease}
-.trust-item:hover i{background:var(--gold);color:#fff;transform:scale(1.1)}
+.trust-item i{color:#000;font-size:.8rem;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(0,0,0,0.04);flex-shrink:0;transition:all .3s ease}
+.trust-item:hover i{background:#000;color:#fff;transform:scale(1.1)}
 .trust-item:hover{color:var(--text)}
 .footer-trust{display:flex;justify-content:center;gap:2rem;padding:20px 0;border-top:1px solid var(--border-light);margin-top:24px;flex-wrap:wrap}
 .footer-trust span{font-size:.56rem;letter-spacing:1.8px;text-transform:uppercase;color:var(--text3);font-weight:500;transition:color .3s ease}
-.footer-trust span:hover{color:var(--gold)}
-.footer-trust i{margin-right:6px;color:var(--gold)}
+.footer-trust span:hover{color:var(--text)}
+.footer-trust i{margin-right:6px;color:var(--text)}
 </style>
 </head>
 <body>
@@ -131,30 +131,26 @@ function gtag() { dataLayer.push(arguments); }
   <!-- HERO -->
   <section class="hero">
     <div class="hero-content">
-      <div class="hero-subtitle">Nueva Coleccion 2026</div>
+      <div class="hero-subtitle breathe">Nueva Coleccion 2026</div>
       <h1 class="hero-title">Moda que<br><span>Inspira Confianza</span></h1>
       <p class="hero-desc">Piezas unicas disenadas para mujeres que definen su propio estilo. Elegancia, calidad y actitud en cada detalle.</p>
       <div class="hero-actions">
-        <a class="btn btn-gold" onclick="document.getElementById('categories').scrollIntoView({behavior:'smooth'})">Explorar Coleccion</a>
+        <a class="btn btn-gold ripple-effect" onclick="document.getElementById('categories').scrollIntoView({behavior:'smooth'})">Explorar Coleccion</a>
         <a class="btn btn-outline hero-btn-secondary" onclick="document.getElementById('categories').scrollIntoView({behavior:'smooth'})">Ver Novedades</a>
       </div>
       <div class="hero-stats">
         <div class="hero-stat">
-          <span class="hero-stat-num">200+</span>
-          <span class="hero-stat-label">Productos</span>
-        </div>
-        <div class="hero-stat-divider"></div>
-        <div class="hero-stat">
-          <span class="hero-stat-num">50+</span>
-          <span class="hero-stat-label">Ciudades</span>
-        </div>
-        <div class="hero-stat-divider"></div>
-        <div class="hero-stat">
           <span class="hero-stat-num">100%</span>
           <span class="hero-stat-label">Colombiano</span>
         </div>
+        <div class="hero-stat-divider"></div>
+        <div class="hero-stat">
+          <span class="hero-stat-num">Al Por Mayor</span>
+          <span class="hero-stat-label">Zona Exclusiva</span>
+        </div>
       </div>
     </div>
+    <div class="hero-scroll-arrow"></div>
   </section>
 
   <!-- TRUST BAR -->
@@ -167,7 +163,7 @@ function gtag() { dataLayer.push(arguments); }
 
   <!-- CATEGORIES -->
   <section class="section" id="categories">
-    <h2 class="section-title reveal">Nuestra Coleccion</h2>
+    <h2 class="section-title line-draw reveal">Nuestra Coleccion</h2>
     <p class="section-subtitle reveal">Encuentra el look perfecto para cada ocasion</p>
     <div class="category-pills">
       <button class="pill active" data-cat="">Todas</button>
@@ -596,7 +592,7 @@ function gtag() { dataLayer.push(arguments); }
 </div>
 
 <!-- Floating Cart Button -->
-<button class="cart-float-btn" id="cart-float-btn" aria-label="Abrir carrito">
+<button class="cart-float-btn ripple-effect" id="cart-float-btn" aria-label="Abrir carrito">
   <i class="fa-solid fa-cart-shopping"></i>
   <span class="cart-float-label">Mi Carrito</span>
   <span class="cart-float-count" id="cart-float-count" style="display:none">0</span>

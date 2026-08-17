@@ -394,7 +394,7 @@ function renderProducts(products) {
     const colors = hasVariants ? [...new Map(p.variants.map(v => [v.color, v.color_hex])).entries()] : [];
     const outOfStock = (p.stock || 0) <= 0;
     return `
-      <div class="product-card" data-id="${p.id}" onclick="navigateTo('product',{slug:'${(p.slug||p.name).toLowerCase().replace(/[^a-z0-9]+/g,'-')}')}">
+      <div class="product-card tilt-card glow-hover" data-id="${p.id}" onclick="navigateTo('product',{slug:'${(p.slug||p.name).toLowerCase().replace(/[^a-z0-9]+/g,'-')}')}">
         <div class="img-wrap">
           <img src="${p.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500'}" alt="${escapeHtml(p.name)}" loading="lazy" style="${outOfStock ? 'filter:grayscale(.9);opacity:.6' : ''}">
           ${disc ? `<span class="badge">-${pct}%</span>` : ''}
@@ -1598,6 +1598,103 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Observe reveal elements
   observeReveal();
+
+  // ===== ADVANCED ANIMATIONS =====
+
+  // Magnetic buttons — follow cursor slightly
+  document.querySelectorAll('.btn-magnetic').forEach(btn => {
+    btn.addEventListener('mousemove', (e) => {
+      const rect = btn.getBoundingClientRect();
+      const x = e.clientX - rect.left - rect.width / 2;
+      const y = e.clientY - rect.top - rect.height / 2;
+      btn.style.transform = `translate(${x * 0.15}px, ${y * 0.15}px)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = 'translate(0, 0)';
+    });
+  });
+
+  // Ripple effect on buttons
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.ripple-effect');
+    if (!btn) return;
+    const circle = document.createElement('span');
+    circle.classList.add('ripple');
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    circle.style.width = circle.style.height = size + 'px';
+    circle.style.left = (e.clientX - rect.left - size / 2) + 'px';
+    circle.style.top = (e.clientY - rect.top - size / 2) + 'px';
+    btn.appendChild(circle);
+    setTimeout(() => circle.remove(), 600);
+  });
+
+  // Card tilt on hover
+  document.querySelectorAll('.tilt-card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      const rotateX = (y - 0.5) * -8;
+      const rotateY = (x - 0.5) * 8;
+      card.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = 'perspective(800px) rotateX(0) rotateY(0) translateY(0)';
+    });
+  });
+
+  // Parallax on scroll for product images
+  const parallaxEls = document.querySelectorAll('.parallax-img');
+  if (parallaxEls.length) {
+    window.addEventListener('scroll', () => {
+      parallaxEls.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const scrolled = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
+        el.style.transform = `translateY(${(scrolled - 0.5) * 20}px) scale(1.05)`;
+      });
+    }, { passive: true });
+  }
+
+  // Hero stats counter animation
+  document.querySelectorAll('.hero-stat-num').forEach(el => {
+    const text = el.textContent.trim();
+    const match = text.match(/^([\d]+)/);
+    if (match) {
+      const target = parseInt(match[1]);
+      const suffix = text.replace(match[1], '');
+      let started = false;
+      const statObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && !started) {
+          started = true;
+          let current = 0;
+          const step = Math.ceil(target / 40);
+          const interval = setInterval(() => {
+            current += step;
+            if (current >= target) {
+              current = target;
+              clearInterval(interval);
+            }
+            el.textContent = current + suffix;
+          }, 30);
+        }
+      }, { threshold: 0.5 });
+      statObserver.observe(el);
+    }
+  });
+
+  // Smooth reveal for product cards on load
+  setTimeout(() => {
+    document.querySelectorAll('.product-card').forEach((card, i) => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(20px)';
+      setTimeout(() => {
+        card.style.transition = 'opacity 0.5s var(--ease), transform 0.5s var(--ease)';
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+      }, 80 * i);
+    });
+  }, 100);
 
   // Register service worker (PWA)
   if ('serviceWorker' in navigator) {
