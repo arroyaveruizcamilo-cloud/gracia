@@ -207,7 +207,7 @@ async def admin_activate_product(pid: int, admin=Depends(require_admin),
 # ─── Customers Management ────────────────────────────────────
 @router.get("/customers")
 async def admin_customers(admin=Depends(require_admin), db: Session = Depends(get_db)):
-    users = db.query(User).order_by(User.created_at.desc()).all()
+    users = db.query(User).filter(User.role != "admin").order_by(User.created_at.desc()).all()
     result = []
     for u in users:
         total_orders = db.query(func.count(Order.id)).filter(
@@ -228,6 +228,8 @@ async def admin_customers(admin=Depends(require_admin), db: Session = Depends(ge
             "total_spent": round(total_spent, 2) if total_spent else 0,
             "last_order_date": last_order.created_at.isoformat() if last_order else None,
             "created_at": u.created_at.isoformat() if u.created_at else None,
+            "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
+            "last_login_ip": u.last_login_ip or "",
         })
     return result
 

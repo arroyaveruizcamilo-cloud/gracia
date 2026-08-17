@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from models import User, Address, CartItem, Wishlist, Product, ProductVariant, Notification
+from models import User, Address, CartItem, Wishlist, Product, ProductVariant, Notification, ActivityLog
 from schemas import AddressCreate, AddressOut, CartItemCreate, CartItemOut, WishlistOut, NotificationOut
-from auth import get_current_user
+from auth import get_current_user, require_admin
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
@@ -226,5 +226,36 @@ def get_user_orders(db: Session = Depends(get_db),
             "customer_email": o.customer_email,
             "created_at": o.created_at.isoformat() if o.created_at else None,
             "items": [{"product_name": i.product_name, "quantity": i.quantity, "price": i.price} for i in o.items],
+        })
+    return result
+
+
+# ===== ADMIN: CLIENTS LIST =====
+@router.get("/clients")
+def list_clients(db: Session = Depends(get_db),
+                 admin: User = Depends(require_admin)):
+    from models import Order
+    users = db.query(User).filter(User.role != "admin").order_by(User.created_at.desc()).all()
+    result = []
+    for u in users:
+        order_count = db.query(Order).filter(Order.user_id == u.id).count()
+        last_activity = db.query(ActivityLog).filter(
+            ActivityLog.user_id == u.id
+        ).order_by(ActivityLog.created_at.desc()).first()
+        result.append({
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "phone": u.phone,
+            "is_active": u.is_active,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
+            "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
+            "last_login_ip": u.last_login_ip or "",
+            "order_count": order_count,
+            "last_activity": {
+                "action": last_activity.action,
+                "details": last_activity.details,
+                "created_at": last_activity.created_at.isoformat() if last_activity.created_at else None,
+            } if last_activity else None,
         })
     return result

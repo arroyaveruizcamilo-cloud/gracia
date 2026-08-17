@@ -707,7 +707,7 @@ async function loadCustomers() {
   try {
     const users = await api.getCustomers(state.token);
     const tbody = $('#customers-table tbody');
-    if (!users.length) { tbody.innerHTML = '<tr><td colspan="9" style="color:var(--text2)">Sin clientes</td></tr>'; return; }
+    if (!users.length) { tbody.innerHTML = '<tr><td colspan="11" style="color:var(--text2)">Sin clientes registrados</td></tr>'; return; }
     tbody.innerHTML = users.map(u => `
       <tr style="${u.is_active ? '' : 'opacity:.5'}">
         <td>${u.id}</td>
@@ -716,7 +716,9 @@ async function loadCustomers() {
         <td>${escapeHtml(u.phone || '—')}</td>
         <td>${u.total_orders ?? 0}</td>
         <td>${fmt(u.total_spent || 0)}</td>
-        <td>${u.last_order_date ? new Date(u.last_order_date).toLocaleDateString() : '—'}</td>
+        <td>${u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}</td>
+        <td>${u.last_login_at ? new Date(u.last_login_at).toLocaleString() : 'Nunca'}</td>
+        <td style="font-size:.78rem;color:var(--text2)">${u.last_login_ip || '—'}</td>
         <td><span style="color:${u.is_active?'var(--success)':'var(--danger)'}">${u.is_active?'Activo':'Bloqueado'}</span></td>
         <td>
           <button class="btn btn-sm ${u.is_active?'btn-danger':'btn-success'}" onclick="toggleCustomerBlock(${u.id})">${u.is_active?'Bloquear':'Desbloquear'}</button>

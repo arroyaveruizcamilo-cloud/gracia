@@ -283,16 +283,18 @@ async def login(request: Request, data: UserLogin, db: Session = Depends(get_db)
                 pass
         raise HTTPException(status_code=403, detail="Verificación reCAPTCHA fallida. Intentá de nuevo.")
 
-    # Verify math CAPTCHA (always enforced — custom fallback if no reCAPTCHA)
-    if data.captcha_token and not _verify_captcha_token(data.captcha_token, data.captcha_answer):
-        log_login_attempt(db, None, data.email, client_ip, False, "captcha_failed")
-        raise HTTPException(status_code=403, detail="CAPTCHA incorrecto. Intentá de nuevo.")
-    elif not RECAPTCHA_SECRET_KEY and not data.captcha_token:
-        # No reCAPTCHA configured AND no math captcha provided
-        log_login_attempt(db, None, data.email, client_ip, False, "captcha_missing")
-        raise HTTPException(status_code=403, detail="Debes completar el CAPTCHA.")
+    # Verify math CAPTCHA (only enforced for admin logins)
+    user_check = db.query(User).filter(User.email == data.email).first()
+    is_admin_login = user_check and user_check.role == UserRole.admin.value
+    if is_admin_login:
+        if data.captcha_token and not _verify_captcha_token(data.captcha_token, data.captcha_answer):
+            log_login_attempt(db, user_check.id if user_check else None, data.email, client_ip, False, "captcha_failed")
+            raise HTTPException(status_code=403, detail="CAPTCHA incorrecto. Intentá de nuevo.")
+        elif not RECAPTCHA_SECRET_KEY and not data.captcha_token:
+            log_login_attempt(db, user_check.id if user_check else None, data.email, client_ip, False, "captcha_missing")
+            raise HTTPException(status_code=403, detail="Debes completar el CAPTCHA.")
 
-    user = db.query(User).filter(User.email == data.email).first()
+    user = user_check
 
     # Check lockout
     if user:
