@@ -505,6 +505,8 @@ function cartTotal() { return state.cart.reduce((s, i) => s + i.price * i.qty, 0
 function updateCartUI() {
   const count = state.cart.reduce((s, i) => s + i.qty, 0);
   $$('.cart-count').forEach(el => { el.textContent = count; el.style.display = count > 0 ? 'flex' : 'none'; });
+  const floatCount = $('#cart-float-count');
+  if (floatCount) { floatCount.textContent = count; floatCount.style.display = count > 0 ? 'flex' : 'none'; }
 }
 
 function renderCartItems() {
@@ -1382,21 +1384,18 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Cart
-  $('#cart-btn')?.addEventListener('click', () => {
+  const openCartSidebar = () => {
     const overlay = $('#cart-overlay');
     const sidebar = $('#cart-sidebar');
     overlay.classList.add('open');
     sidebar.classList.add('open');
-    
-    // Trigger animation
     sidebar.style.animation = 'none';
-    setTimeout(() => {
-      sidebar.style.animation = '';
-    }, 10);
-    
+    setTimeout(() => { sidebar.style.animation = ''; }, 10);
     renderCartItems();
     updateCartFooter();
-  });
+  };
+  $('#cart-btn')?.addEventListener('click', openCartSidebar);
+  $('#cart-float-btn')?.addEventListener('click', openCartSidebar);
   $('#cart-overlay')?.addEventListener('click', (e) => { 
     if (e.target === $('#cart-overlay')) {
       $('#cart-overlay').classList.remove('open'); 
