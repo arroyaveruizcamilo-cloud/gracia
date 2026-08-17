@@ -315,26 +315,29 @@ async def lifespan(app: FastAPI):
 
 def _migrate_runtime():
     """Agrega columnas nuevas a tablas existentes sin romper la DB (SQLite y Postgres)."""
-    from sqlalchemy import text
-    from sqlalchemy.exc import ProgrammingError
+    from sqlalchemy import text, inspect as sa_inspect
 
-    migrations = [
-        ("conversations", "guest_token", "VARCHAR(128)"),
-        ("orders", "stock_released", "BOOLEAN DEFAULT 0"),
-        ("users", "two_factor_secret", "VARCHAR(64) DEFAULT ''"),
-        ("users", "failed_login_attempts", "INTEGER DEFAULT 0"),
-        ("users", "locked_until", "DATETIME"),
-        ("users", "last_login_at", "DATETIME"),
-        ("users", "last_login_ip", "VARCHAR(50) DEFAULT ''"),
-    ]
+    with engine.connect() as conn:
+        inspector = sa_inspect(conn)
+        existing_tables = set(inspector.get_table_names())
+        table_columns = {}
+        for t in existing_tables:
+            table_columns[t] = {c["name"] for c in inspector.get_columns(t)}
 
-    for table, column, col_def in migrations:
-        try:
-            with engine.begin() as conn:
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}"))
-            logger.info(f"Migrated: added {table}.{column}")
-        except ProgrammingError:
-            pass  # Column already exists
+    for table_name, table_cols in Base.metadata.tables.items():
+        if table_name not in existing_tables:
+            continue
+        existing_col_names = table_columns[table_name]
+        for col in table_cols.columns:
+            if col.name not in existing_col_names:
+                col_type = col.type.compile(engine.dialect)
+                ddl = f"ALTER TABLE {table_name} ADD COLUMN {col.name} {col_type}"
+                try:
+                    with engine.begin() as conn2:
+                        conn2.execute(text(ddl))
+                    logger.info(f"Migrated: added {table_name}.{col.name}")
+                except Exception:
+                    pass  # Column already exists or other non-critical error
 
 
 fastapi_app.router.lifespan_context = lifespan
