@@ -14,7 +14,7 @@ from schemas import (
     TwoFactorSetup, TwoFactorVerify, TwoFactorLoginRequest,
 )
 from auth import hash_password, verify_password, create_access_token, get_current_user, require_admin, SECRET_KEY, ALGORITHM
-from services.email_service import send_password_reset
+from services.email_service import send_password_reset, send_login_alert_admin, send_new_device_alert, send_account_locked_alert
 from pydantic import BaseModel, EmailStr
 from jose import jwt
 
@@ -38,6 +38,24 @@ RESET_TOKEN_EXPIRE_MINUTES = 60
 
 # In-memory login rate limiter (IP-based)
 _login_attempts: dict[str, list[float]] = defaultdict(list)
+
+
+def _get_admin_email(db: Session) -> str:
+    admin_email = os.getenv("SEED_ADMIN_EMAIL", "")
+    if admin_email:
+        return admin_email
+    admin = db.query(User).filter(User.role == "admin").first()
+    return admin.email if admin else ""
+
+
+def _get_user_agent(request: Request) -> str:
+    return request.headers.get("user-agent", "desconocido")[:120]
+
+
+def _is_new_ip(user: User, current_ip: str) -> bool:
+    return bool(user.last_login_ip and user.last_login_ip != current_ip)
+
+
 MAX_LOGIN_ATTEMPTS = int(os.getenv("RATE_LIMIT_LOGIN", "10"))
 LOGIN_WINDOW = 60
 
@@ -186,29 +204,72 @@ async def login(request: Request, data: UserLogin, db: Session = Depends(get_db)
     # Verify reCAPTCHA token
     if RECAPTCHA_SECRET_KEY and not await verify_recaptcha(data.recaptcha_token, client_ip):
         log_login_attempt(db, None, data.email, client_ip, False, "recaptcha_failed")
+        admin_email = _get_admin_email(db)
+        if admin_email:
+            try:
+                send_login_alert_admin(admin_email, data.email, client_ip, _get_user_agent(request), False, "recaptcha_failed")
+            except Exception:
+                pass
         raise HTTPException(status_code=403, detail="Verificación reCAPTCHA fallida. Intentá de nuevo.")
 
     user = db.query(User).filter(User.email == data.email).first()
 
     # Check lockout
     if user:
-        check_account_lockout(user)
+        try:
+            check_account_lockout(user)
+        except HTTPException as e:
+            if e.status_code == 423:
+                admin_email = _get_admin_email(db)
+                if admin_email:
+                    try:
+                        send_login_alert_admin(admin_email, data.email, client_ip, _get_user_agent(request), False, "cuenta_bloqueada")
+                    except Exception:
+                        pass
+            raise
 
     # Validate credentials (use dummy hash if user not found to prevent timing attacks)
     dummy_hash = "$2b$12$LJ3m4ys3Lg.Ky8Y1k1xYzOeKzQ9KzQ9KzQ9KzQ9KzQ9KzQ9KzQ9"
     hash_to_check = user.password_hash if user else dummy_hash
+    user_agent = _get_user_agent(request)
+    admin_email = _get_admin_email(db)
+
     if not user or not verify_password(data.password, hash_to_check):
         if user:
             handle_failed_login(user, db)
             attempts_left = MAX_FAILED_ATTEMPTS - user.failed_login_attempts
             reason = f"credenciales_invalidas intentos_restantes={max(attempts_left, 0)}"
             log_login_attempt(db, user.id, data.email, client_ip, False, reason)
+            # Notify admin of failed login attempt
+            if admin_email:
+                try:
+                    send_login_alert_admin(admin_email, data.email, client_ip, user_agent, False, reason)
+                except Exception:
+                    pass
+            # If account just got locked, notify the user
+            if user.failed_login_attempts >= MAX_FAILED_ATTEMPTS and user.locked_until:
+                if admin_email != user.email:
+                    try:
+                        send_account_locked_alert(user.email, user.name, client_ip, LOCKOUT_MINUTES)
+                    except Exception:
+                        pass
         else:
             log_login_attempt(db, None, data.email, client_ip, False, "usuario_no_existe")
+            # Notify admin of attempt with non-existent email
+            if admin_email:
+                try:
+                    send_login_alert_admin(admin_email, data.email, client_ip, user_agent, False, "usuario_no_existe")
+                except Exception:
+                    pass
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
 
     if not user.is_active:
         log_login_attempt(db, user.id, data.email, client_ip, False, "cuenta_inactiva")
+        if admin_email:
+            try:
+                send_login_alert_admin(admin_email, data.email, client_ip, user_agent, False, "cuenta_inactiva")
+            except Exception:
+                pass
         raise HTTPException(status_code=403, detail="Tu cuenta está bloqueada. Contactá al administrador.")
 
     # Check if admin login is restricted to admin panel only
@@ -227,6 +288,7 @@ async def login(request: Request, data: UserLogin, db: Session = Depends(get_db)
         )
 
     # Success - no 2FA
+    new_ip = _is_new_ip(user, client_ip)
     reset_failed_logins(user, db)
     user.last_login_at = datetime.now(timezone.utc)
     user.last_login_ip = client_ip
@@ -234,6 +296,21 @@ async def login(request: Request, data: UserLogin, db: Session = Depends(get_db)
 
     log_login_attempt(db, user.id, data.email, client_ip, True)
     token = create_access_token({"sub": str(user.id), "role": user.role})
+
+    # Notify admin of successful login
+    if admin_email:
+        try:
+            send_login_alert_admin(admin_email, data.email, client_ip, user_agent, True)
+        except Exception:
+            pass
+
+    # Alert user if login from new IP/device
+    if new_ip:
+        try:
+            send_new_device_alert(user.email, user.name, client_ip, user_agent)
+        except Exception:
+            pass
+
     return Token(
         access_token=token,
         token_type="bearer",
@@ -262,9 +339,17 @@ def verify_2fa_login(request: Request, data: TwoFactorLoginRequest, db: Session 
     if not totp.verify(data.code, valid_window=1):
         handle_failed_login(user, db)
         log_login_attempt(db, user.id, user.email, client_ip, False, "2fa_codigo_invalido")
+        user_agent = _get_user_agent(request)
+        admin_email = _get_admin_email(db)
+        if admin_email:
+            try:
+                send_login_alert_admin(admin_email, user.email, client_ip, user_agent, False, "2fa_codigo_invalido")
+            except Exception:
+                pass
         raise HTTPException(status_code=401, detail="Código de verificación inválido")
 
     # 2FA verified - issue token
+    new_ip = _is_new_ip(user, client_ip)
     del _pending_2fa[data.temp_token]
     reset_failed_logins(user, db)
     user.last_login_at = datetime.now(timezone.utc)
@@ -273,6 +358,20 @@ def verify_2fa_login(request: Request, data: TwoFactorLoginRequest, db: Session 
 
     log_login_attempt(db, user.id, user.email, client_ip, True)
     token = create_access_token({"sub": str(user.id), "role": user.role})
+
+    user_agent = _get_user_agent(request)
+    admin_email = _get_admin_email(db)
+    if admin_email:
+        try:
+            send_login_alert_admin(admin_email, user.email, client_ip, user_agent, True)
+        except Exception:
+            pass
+    if new_ip:
+        try:
+            send_new_device_alert(user.email, user.name, client_ip, user_agent)
+        except Exception:
+            pass
+
     return Token(
         access_token=token,
         token_type="bearer",

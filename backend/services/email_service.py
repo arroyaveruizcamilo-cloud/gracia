@@ -1,5 +1,6 @@
 import os
 import smtplib
+from datetime import datetime, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
@@ -170,3 +171,92 @@ def send_order_status_update(to: str, order_id: int, status: str, customer_name:
     </div></body></html>
     """
     return send_email(to, f"{emoji} Pedido #{order_id} — {status}", html)
+
+
+def send_login_alert_admin(to: str, login_email: str, ip: str, user_agent: str, success: bool, reason: str = ""):
+    status_color = "#2ecc71" if success else "#e74c3c"
+    status_text = "✅ Exitoso" if success else "❌ Fallido"
+    detail_line = f"<p style='margin:4px 0;font-size:13px;color:#6b6863'>Motivo: <strong>{reason}</strong></p>" if reason else ""
+    html = f"""
+    <html><body style="font-family:Inter,sans-serif;margin:0;padding:0;background:#f5f3f0">
+    <div style="max-width:520px;margin:auto;background:#fff">
+    <div style="background:#0a0a0f;padding:24px;text-align:center">
+      <h1 style="font-family:Georgia,serif;color:#c9a84c;margin:0;letter-spacing:6px;font-size:20px">GRACIA</h1>
+      <p style="color:rgba(255,255,255,.5);font-size:11px;letter-spacing:3px;margin:4px 0 0">ALERTA DE SEGURIDAD</p>
+    </div>
+    <div style="padding:32px">
+      <div style="background:{('#eafaf1' if success else '#fdecea')};border:1px solid {status_color};border-radius:8px;padding:16px;text-align:center;margin-bottom:20px">
+        <span style="font-size:16px;font-weight:700;color:{status_color}">Login {status_text}</span>
+      </div>
+      <table style="width:100%;font-size:13px;margin-bottom:16px">
+        <tr><td style="padding:6px 0;color:#6b6863;text-transform:uppercase;letter-spacing:1px;font-size:11px">Email</td>
+            <td style="padding:6px 0;font-weight:600;text-align:right">{login_email}</td></tr>
+        <tr><td style="padding:6px 0;color:#6b6863;text-transform:uppercase;letter-spacing:1px;font-size:11px">IP</td>
+            <td style="padding:6px 0;text-align:right">{ip}</td></tr>
+        <tr><td style="padding:6px 0;color:#6b6863;text-transform:uppercase;letter-spacing:1px;font-size:11px">Dispositivo</td>
+            <td style="padding:6px 0;text-align:right;font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis">{user_agent[:80]}</td></tr>
+        <tr><td style="padding:6px 0;color:#6b6863;text-transform:uppercase;letter-spacing:1px;font-size:11px">Hora</td>
+            <td style="padding:6px 0;text-align:right">{datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M UTC')}</td></tr>
+      </table>
+      {detail_line}
+      <div style="background:#faf8f6;border-radius:8px;padding:16px;text-align:center;margin-top:8px">
+        <a href="{os.getenv('FRONTEND_URL', 'http://localhost:5000')}/admin" style="display:inline-block;padding:10px 20px;background:#c9a84c;color:#fff;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600">Ver activity log</a>
+      </div>
+    </div>
+    </div></body></html>
+    """
+    return send_email(to, f"{'⚠️' if success else '🚨'} Login {'exitoso' if success else 'fallido'} — {login_email}", html)
+
+
+def send_new_device_alert(to: str, user_name: str, ip: str, user_agent: str):
+    html = f"""
+    <html><body style="font-family:Inter,sans-serif;margin:0;padding:0;background:#f5f3f0">
+    <div style="max-width:520px;margin:auto;background:#fff">
+    <div style="background:#0a0a0f;padding:24px;text-align:center">
+      <h1 style="font-family:Georgia,serif;color:#c9a84c;margin:0;letter-spacing:6px;font-size:20px">GRACIA</h1>
+      <p style="color:rgba(255,255,255,.5);font-size:11px;letter-spacing:3px;margin:4px 0 0">NUEVO DISPOSITIVO</p>
+    </div>
+    <div style="padding:32px;text-align:center">
+      <div style="font-size:40px;margin-bottom:12px">🔑</div>
+      <h2 style="font-size:18px;margin:0 0 8px;color:#1a1a2e">Hola {user_name},</h2>
+      <p style="color:#6b6863;font-size:14px;margin:0 0 24px">Detectamos un inicio de sesión desde un <strong>nuevo dispositivo</strong>.</p>
+      <table style="width:100%;font-size:13px;margin-bottom:24px;border-collapse:collapse">
+        <tr><td style="padding:8px 12px;color:#6b6863;background:#faf8f6;border-radius:6px 0 0 6px;text-transform:uppercase;letter-spacing:1px;font-size:11px">IP</td>
+            <td style="padding:8px 12px;font-weight:600;background:#faf8f6;border-radius:0 6px 6px 0;text-align:right">{ip}</td></tr>
+        <tr><td style="padding:8px 12px;color:#6b6863;text-transform:uppercase;letter-spacing:1px;font-size:11px">Dispositivo</td>
+            <td style="padding:8px 12px;text-align:right;font-size:12px">{user_agent[:80]}</td></tr>
+        <tr><td style="padding:8px 12px;color:#6b6863;background:#faf8f6;border-radius:6px 0 0 6px;text-transform:uppercase;letter-spacing:1px;font-size:11px">Hora</td>
+            <td style="padding:8px 12px;background:#faf8f6;border-radius:0 6px 6px 0;text-align:right">{datetime.now(timezone.utc).strftime('%d/%m/%Y %H:%M UTC')}</td></tr>
+      </table>
+      <p style="color:#6b6863;font-size:13px;margin:0 0 8px">Si fuiste vos, no tenés que hacer nada.</p>
+      <p style="color:#e74c3c;font-size:13px;margin:0;font-weight:600">Si no reconocés este acceso, cambiá tu contraseña inmediatamente.</p>
+    </div>
+    </div></body></html>
+    """
+    return send_email(to, "🔑 Nuevo dispositivo detectado — GRACIA", html)
+
+
+def send_account_locked_alert(to: str, user_name: str, ip: str, lockout_minutes: int):
+    html = f"""
+    <html><body style="font-family:Inter,sans-serif;margin:0;padding:0;background:#f5f3f0">
+    <div style="max-width:520px;margin:auto;background:#fff">
+    <div style="background:#0a0a0f;padding:24px;text-align:center">
+      <h1 style="font-family:Georgia,serif;color:#c9a84c;margin:0;letter-spacing:6px;font-size:20px">GRACIA</h1>
+      <p style="color:rgba(255,255,255,.5);font-size:11px;letter-spacing:3px;margin:4px 0 0">CUENTA BLOQUEADA</p>
+    </div>
+    <div style="padding:32px;text-align:center">
+      <div style="font-size:40px;margin-bottom:12px">🔒</div>
+      <h2 style="font-size:18px;margin:0 0 8px;color:#e74c3c">Cuenta bloqueada temporalmente</h2>
+      <p style="color:#6b6863;font-size:14px;margin:0 0 24px">Hola {user_name}, tu cuenta fue bloqueada por {lockout_minutes} minutos debido a múltiples intentos de acceso fallidos.</p>
+      <table style="width:100%;font-size:13px;margin-bottom:24px;border-collapse:collapse">
+        <tr><td style="padding:8px 12px;color:#6b6863;background:#faf8f6;border-radius:6px 0 0 6px;text-transform:uppercase;letter-spacing:1px;font-size:11px">IP del intento</td>
+            <td style="padding:8px 12px;font-weight:600;background:#faf8f6;border-radius:0 6px 6px 0;text-align:right">{ip}</td></tr>
+        <tr><td style="padding:8px 12px;color:#6b6863;text-transform:uppercase;letter-spacing:1px;font-size:11px">Duración</td>
+            <td style="padding:8px 12px;text-align:right">{lockout_minutes} minutos</td></tr>
+      </table>
+      <p style="color:#6b6863;font-size:13px;margin:0 0 8px">Si fuiste vos, esperá {lockout_minutes} minutos o contactá al administrador.</p>
+      <p style="color:#e74c3c;font-size:13px;margin:0;font-weight:600">Si no reconocés estos intentos, revisá la seguridad de tu cuenta.</p>
+    </div>
+    </div></body></html>
+    """
+    return send_email(to, "🔒 Tu cuenta fue bloqueada — GRACIA", html)
