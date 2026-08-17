@@ -208,9 +208,19 @@ function renderProductDetail(p) {
   const colors = p.variants ? [...new Map(p.variants.map(v => [v.color, v.color_hex])).entries()] : [];
   const sizes = p.variants ? [...new Set(p.variants.map(v => v.size).filter(Boolean))] : [];
 
+  const allImages = [p.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800', ...(p.images || [])];
+
   $('#pd-image').innerHTML = `
-    <img src="${p.image || 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800'}" alt="${escapeHtml(p.name)}" style="width:100%;height:auto;border-radius:var(--radius-lg)">
-    ${p.images && p.images.length ? `<div style="display:flex;gap:8px;margin-top:12px">${p.images.slice(0, 4).map(u => `<img src="${u}" style="width:80px;height:100px;object-fit:cover;border-radius:var(--radius-sm);cursor:pointer;border:2px solid transparent" onclick="document.querySelector('#pd-image img').src='${u}';this.style.borderColor='var(--gold)';document.querySelectorAll('#pd-image .thumb').forEach(t=>t.style.borderColor='transparent')" class="thumb">`).join('')}</div>` : ''}
+    <div class="product-gallery">
+      <div class="gallery-main">
+        <button class="gallery-arrow gallery-arrow-left" onclick="galleryNav('pd',-1)"><i class="fas fa-chevron-left"></i></button>
+        <img src="${allImages[0]}" alt="${escapeHtml(p.name)}" id="pd-gallery-img" class="gallery-hero">
+        <button class="gallery-arrow gallery-arrow-right" onclick="galleryNav('pd',1)"><i class="fas fa-chevron-right"></i></button>
+        <div class="gallery-counter">1 / ${allImages.length}</div>
+      </div>
+      ${allImages.length > 1 ? `<div class="gallery-thumbs">${allImages.map((u, i) => `<img src="${u}" class="gallery-thumb${i === 0 ? ' active' : ''}" onclick="galleryGo('pd',${i})">`).join('')}</div>` : ''}
+    </div>
+    <input type="hidden" data-gallery="pd" data-index="0" data-total="${allImages.length}" data-images='${JSON.stringify(allImages)}'>
   `;
 
   $('#pd-info').innerHTML = `
@@ -225,6 +235,38 @@ function renderProductDetail(p) {
   `;
 
   loadReviews(p.id);
+}
+
+// ===== PRODUCT GALLERY =====
+function galleryNav(prefix, dir) {
+  const input = document.querySelector(`input[data-gallery="${prefix}"]`);
+  if (!input) return;
+  let idx = parseInt(input.dataset.index);
+  const total = parseInt(input.dataset.total);
+  const images = JSON.parse(input.dataset.images);
+  idx = (idx + dir + total) % total;
+  input.dataset.index = idx;
+  const container = input.parentElement;
+  const img = document.getElementById(`${prefix}-gallery-img`);
+  if (img) img.src = images[idx];
+  const counter = container.querySelector('.gallery-counter');
+  if (counter) counter.textContent = `${idx + 1} / ${total}`;
+  container.querySelectorAll('.gallery-thumb').forEach((t, i) => t.classList.toggle('active', i === idx));
+}
+
+function galleryGo(prefix, idx) {
+  const input = document.querySelector(`input[data-gallery="${prefix}"]`);
+  if (!input) return;
+  const total = parseInt(input.dataset.total);
+  const images = JSON.parse(input.dataset.images);
+  if (idx < 0 || idx >= total) return;
+  input.dataset.index = idx;
+  const container = input.parentElement;
+  const img = document.getElementById(`${prefix}-gallery-img`);
+  if (img) img.src = images[idx];
+  const counter = container.querySelector('.gallery-counter');
+  if (counter) counter.textContent = `${idx + 1} / ${total}`;
+  container.querySelectorAll('.gallery-thumb').forEach((t, i) => t.classList.toggle('active', i === idx));
 }
 
 // ===== REVIEWS =====
@@ -391,11 +433,20 @@ async function quickView(id) {
       <div class="modal" style="max-width:700px">
         <button class="close-modal" onclick="this.closest('.modal-overlay').remove()">&times;</button>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
-          <div>
-            <img src="${p.image}" alt="${escapeHtml(p.name)}" style="width:100%;height:auto;object-fit:cover">
-            ${p.images && p.images.length ? `<div style="display:flex;gap:8px;margin-top:8px">
-              ${p.images.slice(0, 4).map(u => `<img src="${u}" style="width:60px;height:80px;object-fit:cover;cursor:pointer;border:1px solid var(--border)" onclick="this.parentElement.parentElement.previousElementSibling.src='${u}'">`).join('')}
-            </div>` : ''}
+          <div class="product-gallery">
+            ${(() => {
+              const qvImages = [p.image, ...(p.images || [])];
+              return `
+              <div class="gallery-main">
+                <button class="gallery-arrow gallery-arrow-left" onclick="galleryNav('qv',-1)"><i class="fas fa-chevron-left"></i></button>
+                <img src="${qvImages[0]}" alt="${escapeHtml(p.name)}" id="qv-gallery-img" class="gallery-hero">
+                <button class="gallery-arrow gallery-arrow-right" onclick="galleryNav('qv',1)"><i class="fas fa-chevron-right"></i></button>
+                <div class="gallery-counter">1 / ${qvImages.length}</div>
+              </div>
+              ${qvImages.length > 1 ? `<div class="gallery-thumbs">${qvImages.map((u, i) => `<img src="${u}" class="gallery-thumb${i === 0 ? ' active' : ''}" onclick="galleryGo('qv',${i})">`).join('')}</div>` : ''}
+              <input type="hidden" data-gallery="qv" data-index="0" data-total="${qvImages.length}" data-images='${JSON.stringify(qvImages)}'>
+              `;
+            })()}
           </div>
           <div>
             <div class="cat-tag" style="font-size:.7rem;color:var(--gold);text-transform:uppercase;letter-spacing:1.5px">${escapeHtml(p.category)}</div>
