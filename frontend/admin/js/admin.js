@@ -988,10 +988,10 @@ async function loadAdminChatConversations() {
     }
 
     list.innerHTML = convs.map(c => {
-      const active = c.id === adminChat.currentConvId ? 'background:rgba(184,148,31,.08)' : '';
+      const active = c.id === adminChat.currentConvId ? 'background:rgba(0,0,0,.04)' : '';
       return `<div class="admin-chat-conv" data-id="${c.id}" onclick="selectAdminChat(${c.id})" style="padding:14px 16px;border-bottom:1px solid var(--border-light);cursor:pointer;${active}">
         <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:38px;height:38px;border-radius:50%;background:var(--gold-glow);border:1px solid rgba(184,148,31,.15);display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--gold);flex-shrink:0">
+          <div style="width:38px;height:38px;border-radius:50%;background:var(--gold-glow);border:1px solid rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--gold);flex-shrink:0">
             <i class="fas fa-user"></i>
           </div>
           <div style="flex:1;min-width:0">
