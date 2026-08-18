@@ -140,6 +140,7 @@ const api = {
   getTopProducts(t) { return this.request('GET', '/analytics/products', null, t); },
 
   // Live Chat
+  getConversations(t) { return this.request('GET', '/chat/conversations', null, t); },
   createConversation(d, t) { return this.request('POST', '/chat/conversations', d, t); },
   createGuestConversation(d) { return this.request('POST', '/chat/conversations/guest', d); },
   getConversationMessages(id, t, guestToken) { return this.request('GET', `/chat/conversations/${id}/messages`, null, t, guestToken ? { 'X-Guest-Token': guestToken } : null); },

@@ -741,6 +741,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
       window.location.href = '/admin';
       return;
     }
+    syncUserSession();
     showToast(`Bienvenida, ${r.user.name}!`);
   } catch (err) { showToast(err.message); }
   btn.disabled = false; btn.textContent = 'Ingresar';
@@ -756,6 +757,7 @@ document.getElementById('registerForm').addEventListener('submit', async functio
     save('token'); save('user');
     closeModal('authModal');
     updateAuthUI();
+    syncUserSession();
     showToast('Cuenta creada!');
   } catch (err) { showToast(err.message); }
   btn.disabled = false; btn.textContent = 'Crear Cuenta';

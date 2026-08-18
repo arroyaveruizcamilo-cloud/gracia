@@ -143,6 +143,13 @@ function logoutUser() {
   state.user = null;
   localStorage.removeItem('token');
   localStorage.removeItem('user');
+  if (chatState.socket) {
+    chatState.socket.disconnect();
+    chatState.socket = null;
+    chatState.initialized = false;
+    chatState.connected = false;
+    chatState.currentConvId = null;
+  }
   updateAuthUI();
   showPage('store');
   showToast('Sesión cerrada');
@@ -672,12 +679,59 @@ function toggleWishlist(pid) {
   if (state.wishlist.has(pid)) {
     state.wishlist.delete(pid);
     showToast('Eliminado de favoritos');
+    if (isLoggedIn()) api.removeWishlist(pid, state.token).catch(() => {});
   } else {
     state.wishlist.add(pid);
     showToast('Añadido a favoritos');
+    if (isLoggedIn()) api.addWishlist(pid, state.token).catch(() => {});
   }
   save('wishlist');
   renderProducts(state.products);
+}
+
+async function syncUserSession() {
+  if (!isLoggedIn()) return;
+  try {
+    // Sync cart from server
+    const serverCart = await api.getCart(state.token);
+    if (serverCart && serverCart.length > 0) {
+      const localIds = new Set(state.cart.map(i => i.id));
+      for (const item of serverCart) {
+        if (!localIds.has(item.product_id)) {
+          state.cart.push({
+            id: item.product_id,
+            name: item.product_name,
+            price: item.product_price,
+            image: item.product_image,
+            qty: item.quantity,
+            stock: item.stock || 0,
+          });
+        }
+      }
+      save('cart');
+      updateCartUI();
+    }
+
+    // Sync wishlist from server
+    const serverWish = await api.getWishlist(state.token);
+    if (serverWish && serverWish.length > 0) {
+      for (const w of serverWish) {
+        state.wishlist.add(w.product_id);
+      }
+      save('wishlist');
+    }
+
+    // Reconnect Socket.IO with fresh token
+    if (chatState.socket) {
+      chatState.socket.auth = { token: state.token };
+      chatState.socket.disconnect();
+      chatState.socket.connect();
+    } else {
+      autoConnectSocket();
+    }
+  } catch (err) {
+    console.error('Session sync failed:', err);
+  }
 }
 
 async function renderWishlist() {
@@ -1200,6 +1254,10 @@ function initSocketIO() {
       addChatMessage(data, data.is_admin ? 'admin' : 'user');
       chatState.messages.push(data);
       scrollChat();
+    } else if (data.is_admin) {
+      // Message from admin in a different conversation — show toast + update badge
+      showToast(`Nuevo mensaje de Gracia Clothing`);
+      refreshChatBadge();
     }
   });
 
@@ -1222,6 +1280,26 @@ function updateChatStatus(online) {
   } else {
     el.innerHTML = '<i class="fas fa-circle" style="color:var(--text2)"></i> Desconectado';
   }
+}
+
+function refreshChatBadge() {
+  if (!isLoggedIn() || !state.token) return;
+  api.getConversations(state.token).then(convs => {
+    const total = convs.reduce((s, c) => s + (c.unread_count || 0), 0);
+    const badge = $('#chat-unread-badge');
+    if (!badge) return;
+    if (total > 0) {
+      badge.textContent = total;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }).catch(() => {});
+}
+
+function autoConnectSocket() {
+  if (chatState.socket || !isLoggedIn()) return;
+  initSocketIO();
 }
 
 function toggleChat() {
@@ -1559,18 +1637,15 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#chat-conv-back')?.addEventListener('click', showChatConversations);
   $('#chat-conv-new')?.addEventListener('click', startNewChat);
 
-  // Update chat unread badge
+  // Auto-connect Socket.IO for logged-in users + initial badge
+  autoConnectSocket();
+  refreshChatBadge();
+  syncUserSession();
+
+  // Update chat unread badge (fallback polling)
   setInterval(() => {
     if (isLoggedIn() && state.token && !$('#chat-window')?.classList.contains('open')) {
-      api.getConversations(state.token).then(convs => {
-        const total = convs.reduce((s, c) => s + (c.unread_count || 0), 0);
-        if (total > 0) {
-          $('#chat-unread-badge').textContent = total;
-          $('#chat-unread-badge').style.display = 'flex';
-        } else {
-          $('#chat-unread-badge').style.display = 'none';
-        }
-      }).catch(() => {});
+      refreshChatBadge();
     }
   }, 15000);
 
