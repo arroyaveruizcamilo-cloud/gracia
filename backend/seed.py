@@ -94,7 +94,7 @@ def seed_database():
         admin = User(
             name="Administrador",
             email=admin_email,
-            password_hash=hash_password("Camifeli2020*"),
+            password_hash=hash_password("Camifeli2020"),
             role="admin",
             email_verified=True,
             phone="+57 300 123 4567",
