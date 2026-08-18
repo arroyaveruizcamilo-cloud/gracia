@@ -181,21 +181,11 @@ async function handleLogin(e) {
     return;
   }
 
-  // Validate visual CAPTCHA
-  const captcha = getCaptchaAnswer();
-  const hasServerToken = !!captcha.token;
-  const hasAnswer = captcha.answerText.length > 0;
-  if (!hasAnswer) {
-    errEl.textContent = 'Por favor completá la verificación.';
-    errEl.style.display = 'block';
-    return;
-  }
-
   const submitBtn = e.target.querySelector('button[type="submit"]');
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Verificando...'; }
 
   try {
-    const res = await api.login(email, password, recaptchaToken, captcha.token, captcha.answer, captcha.answerText);
+    const res = await api.login(email, password, recaptchaToken);
 
     if (res.requires_2fa) {
       state.tempToken = res.temp_token || null;

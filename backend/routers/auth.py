@@ -377,25 +377,7 @@ async def login(request: Request, data: UserLogin, db: Session = Depends(get_db)
                 pass
         raise HTTPException(status_code=403, detail="Verificación reCAPTCHA fallida. Intentá de nuevo.")
 
-    # Verify CAPTCHA (only enforced for admin logins)
-    user_check = db.query(User).filter(User.email == data.email).first()
-    is_admin_login = user_check and user_check.role == UserRole.admin.value
-    if is_admin_login:
-        # Visual captcha: token + text answer
-        if data.captcha_token and data.captcha_answer_text:
-            if not _verify_visual_captcha(data.captcha_token, data.captcha_answer_text):
-                log_login_attempt(db, user_check.id if user_check else None, data.email, client_ip, False, "captcha_failed")
-                raise HTTPException(status_code=403, detail="CAPTCHA incorrecto. Intentá de nuevo.")
-        # Legacy math captcha: token + int answer
-        elif data.captcha_token and not data.captcha_answer_text and data.captcha_answer:
-            if not _verify_captcha_token(data.captcha_token, data.captcha_answer):
-                log_login_attempt(db, user_check.id if user_check else None, data.email, client_ip, False, "captcha_failed")
-                raise HTTPException(status_code=403, detail="CAPTCHA incorrecto. Intentá de nuevo.")
-        # Inline captcha fallback: answer provided without token
-        elif not data.captcha_token and data.captcha_answer_text:
-            pass
-
-    user = user_check
+    user = db.query(User).filter(User.email == data.email).first()
 
     # Check lockout
     if user:
