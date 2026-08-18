@@ -17,6 +17,7 @@ class UserLogin(BaseModel):
     recaptcha_token: str = ""
     captcha_token: str = ""
     captcha_answer: int = 0
+    captcha_answer_text: str = ""
 
 
 class UserOut(BaseModel):

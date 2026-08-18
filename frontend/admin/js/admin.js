@@ -126,16 +126,22 @@ function getRecaptchaToken() {
   }
 }
 
-// ===== MATH CAPTCHA =====
+// ===== VISUAL CAPTCHA =====
 async function loadMathCaptcha() {
+  const imgWrap = $('#captcha-image-wrap');
+  const loading = $('#captcha-loading');
+  const label = $('#captcha-label');
+  const tokenInput = $('#captcha-token');
+  const answerInput = $('#captcha-answer');
   try {
+    if (loading) loading.style.display = '';
+    if (label) label.textContent = 'Escribi los caracteres que ves:';
     const res = await fetch('/api/auth/captcha');
     const data = await res.json();
-    const label = $('#captcha-label');
-    const tokenInput = $('#captcha-token');
-    const answerInput = $('#captcha-answer');
-    if (label && data.question) {
-      label.textContent = data.question;
+    if (data.image_svg && imgWrap) {
+      imgWrap.innerHTML = data.image_svg;
+      const svg = imgWrap.querySelector('svg');
+      if (svg) { svg.style.maxWidth = '100%'; svg.style.height = 'auto'; }
     }
     if (tokenInput && data.token) {
       tokenInput.value = data.token;
@@ -145,8 +151,8 @@ async function loadMathCaptcha() {
       answerInput.focus();
     }
   } catch (err) {
-    const label = $('#captcha-label');
-    if (label) label.textContent = 'Error cargando verificación. Recargá la página.';
+    if (imgWrap) imgWrap.innerHTML = '<span style="font-size:.8rem;color:var(--danger);padding:12px">Error cargando CAPTCHA. Hace clic en refresh.</span>';
+    if (label) label.textContent = 'Error cargando verificación';
   }
 }
 
@@ -156,6 +162,7 @@ function getCaptchaAnswer() {
   return {
     token: tokenInput ? tokenInput.value : '',
     answer: answerInput ? parseInt(answerInput.value, 10) || 0 : 0,
+    answerText: answerInput ? answerInput.value.trim() : '',
   };
 }
 
@@ -174,12 +181,12 @@ async function handleLogin(e) {
     return;
   }
 
-  // Validate math CAPTCHA
+  // Validate visual CAPTCHA
   const captcha = getCaptchaAnswer();
   const hasServerToken = !!captcha.token;
-  const hasInlineAnswer = !isNaN(captcha.answer) && captcha.answer !== 0;
-  if (!hasServerToken && !hasInlineAnswer) {
-    errEl.textContent = 'Por favor completá la verificación matemática.';
+  const hasAnswer = captcha.answerText.length > 0;
+  if (!hasAnswer) {
+    errEl.textContent = 'Por favor completá la verificación.';
     errEl.style.display = 'block';
     return;
   }
@@ -188,7 +195,7 @@ async function handleLogin(e) {
   if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Verificando...'; }
 
   try {
-    const res = await api.login(email, password, recaptchaToken, captcha.token, captcha.answer);
+    const res = await api.login(email, password, recaptchaToken, captcha.token, captcha.answer, captcha.answerText);
 
     if (res.requires_2fa) {
       state.tempToken = res.temp_token || null;

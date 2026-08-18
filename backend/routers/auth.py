@@ -167,16 +167,119 @@ async def verify_recaptcha(token: str, remote_ip: str = "") -> bool:
         return False
 
 
-# ===== MATH CAPTCHA (custom, no Google needed) =====
+# ===== VISUAL CAPTCHA (SVG-based, no external deps) =====
 import random
 import hashlib
+import string
+import base64
 
 _CAPTCHA_EXPIRE_SECONDS = 120  # 2 minutes
+_CAPTCHA_LENGTH = 5
 
 class CaptchaChallenge(BaseModel):
-    question: str
+    image_svg: str
     token: str
 
+
+def _generate_captcha_code() -> str:
+    chars = string.ascii_uppercase + string.digits
+    chars = chars.replace("O", "").replace("0", "").replace("I", "").replace("1", "").replace("L", "")
+    return "".join(random.choices(chars, k=_CAPTCHA_LENGTH))
+
+
+def _generate_visual_captcha_token(code: str) -> str:
+    ts = int(time.time())
+    sig = hashlib.sha256(f"{code}:{ts}:{SECRET_KEY}".encode()).hexdigest()[:16]
+    return f"{code}:{ts}:{sig}"
+
+
+def _verify_visual_captcha(token: str, user_answer: str) -> bool:
+    try:
+        parts = token.split(":")
+        if len(parts) != 3:
+            return False
+        code, ts_str, sig = parts
+        ts = int(ts_str)
+        if time.time() - ts > _CAPTCHA_EXPIRE_SECONDS:
+            return False
+        if user_answer.upper().strip() != code:
+            return False
+        expected_sig = hashlib.sha256(f"{code}:{ts}:{SECRET_KEY}".encode()).hexdigest()[:16]
+        return sig == expected_sig
+    except Exception:
+        return False
+
+
+def _render_captcha_svg(code: str) -> str:
+    width = 200
+    height = 60
+    chars = list(code)
+    n = len(chars)
+
+    # Background
+    bg_r = random.randint(220, 245)
+    bg_g = random.randint(220, 245)
+    bg_b = random.randint(220, 245)
+
+    svg_parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">',
+        f'<rect width="{width}" height="{height}" fill="rgb({bg_r},{bg_g},{bg_b})" rx="6"/>',
+    ]
+
+    # Noise lines (crossing)
+    for _ in range(5):
+        x1 = random.randint(0, width)
+        y1 = random.randint(0, height)
+        x2 = random.randint(0, width)
+        y2 = random.randint(0, height)
+        r = random.randint(80, 180)
+        g = random.randint(80, 180)
+        b = random.randint(80, 180)
+        opacity = round(random.uniform(0.2, 0.5), 2)
+        svg_parts.append(f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="rgb({r},{g},{b})" stroke-width="{random.randint(1,3)}" opacity="{opacity}"/>')
+
+    # Noise dots
+    for _ in range(60):
+        cx = random.randint(5, width - 5)
+        cy = random.randint(5, height - 5)
+        cr = random.randint(1, 3)
+        r = random.randint(40, 200)
+        g = random.randint(40, 200)
+        b = random.randint(40, 200)
+        opacity = round(random.uniform(0.3, 0.7), 2)
+        svg_parts.append(f'<circle cx="{cx}" cy="{cy}" r="{cr}" fill="rgb({r},{g},{b})" opacity="{opacity}"/>')
+
+    # Characters with rotation and color
+    char_width = (width - 40) / n
+    for i, ch in enumerate(chars):
+        x = 20 + i * char_width + char_width / 2
+        y = height / 2 + random.randint(-8, 8)
+        rotation = random.randint(-25, 25)
+        r = random.randint(10, 90)
+        g = random.randint(10, 90)
+        b = random.randint(10, 90)
+        font_size = random.randint(28, 36)
+        svg_parts.append(
+            f'<text x="{x}" y="{y}" '
+            f'font-family="Courier New,monospace" font-weight="bold" font-size="{font_size}" '
+            f'fill="rgb({r},{g},{b})" text-anchor="middle" dominant-baseline="central" '
+            f'transform="rotate({rotation},{x},{y})">{ch}</text>'
+        )
+
+    # Wavy line through text
+    wave_y = height / 2 + random.randint(-5, 5)
+    wave_points = []
+    for x in range(0, width + 1, 4):
+        import math
+        y_off = math.sin(x * 0.08 + random.uniform(0, 6)) * random.uniform(4, 10)
+        wave_points.append(f"{x},{wave_y + y_off}")
+    svg_parts.append(f'<polyline points="{" ".join(wave_points)}" fill="none" stroke="rgb({bg_r - 60},{bg_g - 60},{bg_b - 60})" stroke-width="2" opacity="0.5"/>')
+
+    svg_parts.append("</svg>")
+    return "\n".join(svg_parts)
+
+
+# Keep math captcha endpoints for backwards compatibility but mark as legacy
 class CaptchaVerify(BaseModel):
     token: str
     answer: int
@@ -216,19 +319,10 @@ def _verify_captcha_token(token: str, user_answer: int) -> bool:
 
 @router.get("/captcha", response_model=CaptchaChallenge)
 def generate_captcha():
-    ops = ["+", "-", "*"]
-    op = random.choice(ops)
-    if op == "+":
-        a, b = random.randint(1, 50), random.randint(1, 50)
-    elif op == "-":
-        a = random.randint(10, 60)
-        b = random.randint(1, a)
-    else:
-        a, b = random.randint(2, 12), random.randint(2, 12)
-    answer = eval(f"{a} {op} {b}")
-    token = _generate_captcha_token(a, b, op, answer)
-    question = f"¿Cuánto es {a} {op} {b}?"
-    return CaptchaChallenge(question=question, token=token)
+    code = _generate_captcha_code()
+    token = _generate_visual_captcha_token(code)
+    svg = _render_captcha_svg(code)
+    return CaptchaChallenge(image_svg=svg, token=token)
 
 
 @router.post("/captcha/verify")
@@ -283,18 +377,22 @@ async def login(request: Request, data: UserLogin, db: Session = Depends(get_db)
                 pass
         raise HTTPException(status_code=403, detail="Verificación reCAPTCHA fallida. Intentá de nuevo.")
 
-    # Verify math CAPTCHA (only enforced for admin logins)
+    # Verify CAPTCHA (only enforced for admin logins)
     user_check = db.query(User).filter(User.email == data.email).first()
     is_admin_login = user_check and user_check.role == UserRole.admin.value
     if is_admin_login:
-        # If server-side captcha token is provided, verify it
-        if data.captcha_token and not _verify_captcha_token(data.captcha_token, data.captcha_answer):
-            log_login_attempt(db, user_check.id if user_check else None, data.email, client_ip, False, "captcha_failed")
-            raise HTTPException(status_code=403, detail="CAPTCHA incorrecto. Intentá de nuevo.")
-        # If inline captcha answer is provided without token, verify it directly
-        elif not data.captcha_token and data.captcha_answer and data.captcha_answer != 0:
-            # Inline captcha: frontend generated the question, user answered
-            # We trust the inline answer as a bot deterrent (rate limiting + lockout provide real security)
+        # Visual captcha: token + text answer
+        if data.captcha_token and data.captcha_answer_text:
+            if not _verify_visual_captcha(data.captcha_token, data.captcha_answer_text):
+                log_login_attempt(db, user_check.id if user_check else None, data.email, client_ip, False, "captcha_failed")
+                raise HTTPException(status_code=403, detail="CAPTCHA incorrecto. Intentá de nuevo.")
+        # Legacy math captcha: token + int answer
+        elif data.captcha_token and not data.captcha_answer_text and data.captcha_answer:
+            if not _verify_captcha_token(data.captcha_token, data.captcha_answer):
+                log_login_attempt(db, user_check.id if user_check else None, data.email, client_ip, False, "captcha_failed")
+                raise HTTPException(status_code=403, detail="CAPTCHA incorrecto. Intentá de nuevo.")
+        # Inline captcha fallback: answer provided without token
+        elif not data.captcha_token and data.captcha_answer_text:
             pass
 
     user = user_check
