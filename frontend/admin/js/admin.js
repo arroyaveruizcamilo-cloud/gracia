@@ -176,7 +176,9 @@ async function handleLogin(e) {
 
   // Validate math CAPTCHA
   const captcha = getCaptchaAnswer();
-  if (!captcha.token || isNaN(captcha.answer)) {
+  const hasServerToken = !!captcha.token;
+  const hasInlineAnswer = !isNaN(captcha.answer) && captcha.answer !== 0;
+  if (!hasServerToken && !hasInlineAnswer) {
     errEl.textContent = 'Por favor completá la verificación matemática.';
     errEl.style.display = 'block';
     return;

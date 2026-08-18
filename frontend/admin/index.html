@@ -103,6 +103,24 @@
         </div>
         <input type="hidden" id="captcha-token" value="">
       </div>
+      <script>
+      (function() {
+        function inlineCaptcha() {
+          var ops = ['+', '-', '*'];
+          var op = ops[Math.floor(Math.random() * ops.length)];
+          var a, b, ans;
+          if (op === '+') { a = 1 + Math.floor(Math.random() * 50); b = 1 + Math.floor(Math.random() * 50); ans = a + b; }
+          else if (op === '-') { a = 10 + Math.floor(Math.random() * 50); b = 1 + Math.floor(Math.random() * a); ans = a - b; }
+          else { a = 2 + Math.floor(Math.random() * 10); b = 2 + Math.floor(Math.random() * 10); ans = a * b; }
+          window._inlineCaptchaAnswer = ans;
+          var label = document.getElementById('captcha-label');
+          if (label) label.textContent = '\u00BFCu\u00E1nto es ' + a + ' ' + op + ' ' + b + '?';
+        }
+        inlineCaptcha();
+        var btn = document.getElementById('captcha-refresh');
+        if (btn) btn.addEventListener('click', inlineCaptcha);
+      })();
+      </script>
       <button type="submit" class="btn btn-gold">Iniciar Sesión</button>
     </form>
   </div>
