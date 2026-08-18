@@ -70,6 +70,21 @@ function gtag() { dataLayer.push(arguments); }
 </head>
 <body>
 
+<!-- PAGE LOADER -->
+<div class="page-loader" id="page-loader">
+  <div class="loader-inner">
+    <div class="loader-logo">Gracia</div>
+    <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+  </div>
+</div>
+
+<!-- SCROLL PROGRESS BAR -->
+<div class="scroll-progress" id="scroll-progress"></div>
+
+<!-- CURSOR FOLLOWER -->
+<div class="cursor-dot" id="cursor-dot"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+
 <!-- TOP BAR -->
 <div class="topbar" id="topbar">Envío gratis en compras +$149.990 &nbsp;&middot;&nbsp; <span>Colección 2026</span> &nbsp;&middot;&nbsp; Cuotas sin interés<button class="topbar-dismiss" onclick="dismissTopbar()" aria-label="Cerrar">&times;</button></div>
 
@@ -129,10 +144,17 @@ function gtag() { dataLayer.push(arguments); }
 <div id="page-store" class="page active">
 
   <!-- HERO -->
-  <section class="hero">
+  <section class="hero" id="hero">
+    <div class="hero-shapes">
+      <div class="hero-shape shape-1"></div>
+      <div class="hero-shape shape-2"></div>
+      <div class="hero-shape shape-3"></div>
+      <div class="hero-shape shape-4"></div>
+      <div class="hero-shape shape-5"></div>
+    </div>
     <div class="hero-content">
       <div class="hero-subtitle breathe">Nueva Coleccion 2026</div>
-      <h1 class="hero-title">Moda que<br><span>Inspira Confianza</span></h1>
+      <h1 class="hero-title"><span class="word-wrap"><span class="word">Moda</span></span> <span class="word-wrap"><span class="word">que</span></span><br><span class="word-wrap"><span class="word">Inspira</span></span> <span class="word-wrap"><span class="word">Confianza</span></span></h1>
       <p class="hero-desc">Piezas unicas disenadas para mujeres que definen su propio estilo. Elegancia, calidad y actitud en cada detalle.</p>
       <div class="hero-actions">
         <a class="btn btn-gold ripple-effect" onclick="document.getElementById('categories').scrollIntoView({behavior:'smooth'})">Explorar Coleccion</a>
