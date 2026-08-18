@@ -59,6 +59,12 @@ const state = {
   selectedVariant: {},
 };
 
+// ===== TOPBAR DISMISS =====
+function dismissTopbar() {
+  const tb = $('#topbar');
+  if (tb) { tb.style.animation = 'none'; tb.style.maxHeight = '0'; tb.style.padding = '0'; tb.style.overflow = 'hidden'; tb.style.transition = 'all 0.4s var(--ease)'; }
+}
+
 // ===== UTILITY =====
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
@@ -738,7 +744,10 @@ async function renderWishlist() {
   const grid = $('#wishlist-grid');
   if (!grid) return;
   const ids = [...state.wishlist];
-  if (!ids.length) { grid.innerHTML = '<p style="text-align:center;color:var(--text2);padding:40px">No tienes favoritos aún</p>'; return; }
+  if (!ids.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><i class="fa-regular fa-heart"></i><h3>Tus favoritos estan vacios</h3><p>Explora nuestra coleccion y guarda los productos que mas te gusten</p><button class="btn btn-gold" onclick="showPage('store')">Explorar Tienda</button></div>`;
+    return;
+  }
   try {
     const all = await api.getProducts();
     const items = all.filter(p => ids.includes(p.id));
@@ -1641,6 +1650,14 @@ document.addEventListener('DOMContentLoaded', () => {
   autoConnectSocket();
   refreshChatBadge();
   syncUserSession();
+
+  // Scroll-to-top button visibility
+  const scrollTopBtn = $('#scroll-top-btn');
+  if (scrollTopBtn) {
+    window.addEventListener('scroll', () => {
+      scrollTopBtn.classList.toggle('visible', window.scrollY > 400);
+    }, { passive: true });
+  }
 
   // Update chat unread badge (fallback polling)
   setInterval(() => {

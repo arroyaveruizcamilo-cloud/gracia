@@ -1695,6 +1695,7 @@ a:hover { color: var(--gold-dark); }
   .product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .wishlist-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .product-card .overlay { transform: translateY(0); padding: 14px 12px; }
+  .product-card .wishlist-btn { opacity: 1; transform: translateY(0); }
   .product-card .info { padding: 14px 12px 16px; }
   .product-card .info h3 { font-size: 0.95rem; margin-bottom: 6px; }
   .product-card .info .price { font-size: 0.95rem; }
@@ -2086,6 +2087,154 @@ a:hover { color: var(--gold-dark); }
   border-radius: 2px;
   animation: scrollWheel 2s ease-in-out infinite;
 }
+
+/* ═══════════════════════════════════════════════
+   SCROLL TO TOP BUTTON
+   ═══════════════════════════════════════════════ */
+.scroll-top-btn {
+  position: fixed; bottom: 160px; right: 24px;
+  width: 44px; height: 44px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; color: var(--text2);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  z-index: 1498;
+  opacity: 0; transform: translateY(20px);
+  transition: all 0.4s var(--ease);
+  pointer-events: none;
+}
+.scroll-top-btn.visible {
+  opacity: 1; transform: translateY(0);
+  pointer-events: auto;
+}
+.scroll-top-btn:hover {
+  background: var(--text); color: var(--text2) !important;
+  border-color: var(--text);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+@media (max-width: 768px) {
+  .scroll-top-btn { right: 16px; bottom: 150px; }
+}
+
+/* ═══════════════════════════════════════════════
+   TOPBAR DISMISS
+   ═══════════════════════════════════════════════ */
+.topbar-dismiss {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: rgba(255,255,255,0.5);
+  cursor: pointer; font-size: 0.75rem; padding: 4px 8px;
+  transition: color 0.2s; z-index: 2;
+}
+.topbar-dismiss:hover { color: #fff; }
+
+/* ═══════════════════════════════════════════════
+   FOCUS VISIBLE STYLES
+   ═══════════════════════════════════════════════ */
+*:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.header-actions button:focus-visible,
+.cart-btn:focus-visible,
+.chat-btn:focus-visible,
+.cart-float-btn:focus-visible,
+.scroll-top-btn:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+}
+
+/* ═══════════════════════════════════════════════
+   EMPTY STATE DESIGN
+   ═══════════════════════════════════════════════ */
+.empty-state {
+  text-align: center; padding: 64px 24px;
+  color: var(--text3);
+}
+.empty-state i {
+  font-size: 3.5rem; opacity: 0.15; margin-bottom: 18px;
+  display: block;
+}
+.empty-state h3 {
+  font-family: var(--font-d); font-size: 1.2rem; color: var(--text2);
+  margin-bottom: 10px; font-weight: 500;
+}
+.empty-state p {
+  font-size: 0.85rem; max-width: 320px; margin: 0 auto 20px;
+  line-height: 1.6;
+}
+.empty-state .btn { min-width: 180px; }
+
+/* ═══════════════════════════════════════════════
+   LOADING SPINNER BUTTON
+   ═══════════════════════════════════════════════ */
+.btn.loading {
+  pointer-events: none;
+  position: relative;
+  color: transparent !important;
+}
+.btn.loading::after {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════
+   SKELETON PULSE ANIMATION
+   ═══════════════════════════════════════════════ */
+.skeleton-img, .skeleton-text {
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--border-light) 37%, var(--bg3) 63%);
+  background-size: 400% 100%;
+  animation: skeletonPulse 1.4s ease infinite;
+}
+@keyframes skeletonPulse {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ═══════════════════════════════════════════════
+   DARK MODE FIXES
+   ═══════════════════════════════════════════════ */
+.pill:hover { border-color: var(--text); color: var(--text); }
+.pill.active { border-color: var(--text); background: var(--text); color: var(--bg); }
+.product-card .badge { background: var(--text); color: var(--bg); }
+.product-card .badge-new { background: var(--text); color: var(--bg); }
+.product-card:hover .info h3 { color: var(--text); }
+.hero-stat:hover .hero-stat-num { color: var(--gold); }
+.scroll-top-btn:hover { color: var(--bg); }
+[data-theme="dark"] .scroll-top-btn {
+  background: #1a1a1a; border-color: #333;
+}
+[data-theme="dark"] .scroll-top-btn:hover {
+  background: #fff; color: #000 !important;
+}
+
+/* ═══════════════════════════════════════════════
+   Z-INDEX LAYER SYSTEM
+   ═══════════════════════════════════════════════
+   1400 = social floating
+   1450 = scroll-to-top
+   1480 = mini-cart dropdown
+   1500 = floating cart button + chat button
+   1550 = chat window
+   2000 = cart overlay + sidebar
+   3000 = modals
+   5000 = toast
+   ═══════════════════════════════════════════════ */
+.social-floating { z-index: 1400; }
+.scroll-top-btn { z-index: 1450; }
+.mini-cart-dropdown { z-index: 1480; }
+.cart-float-btn { z-index: 1500; }
+.chat-btn { z-index: 1500; }
+.chat-window { z-index: 1550; }
+.cart-overlay { z-index: 2000; }
+.cart-sidebar { z-index: 2001; }
+.modal-overlay { z-index: 3000; }
+.toast { z-index: 5000; }
 @keyframes scrollWheel {
   0% { transform: translateY(0); opacity: 1; }
   100% { transform: translateY(10px); opacity: 0; }
