@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, PlainTextResponse, HTMLResponse
 from database import engine, Base, SessionLocal
 from models import User, UserRole, Product, ProductVariant, FAQ, Coupon
-from auth import hash_password
+from auth import hash_password, verify_password
 from middleware.error_handler import global_error_handler
 import json
 import socketio
@@ -285,9 +285,14 @@ async def lifespan(app: FastAPI):
 
     admin = db.query(User).filter(User.role == UserRole.admin.value).first()
     if admin:
-        # No sobreescribir credenciales ya configuradas en el panel: un deploy
-        # no debe revertir un cambio de contraseña hecho a mano.
-        logger.info("Admin ya existe — se ignoran SEED_ADMIN_* (no se pisan cambios manuales)")
+        # Sync password hash with SEED_ADMIN_PASSWORD if it changed
+        if admin_pass and not verify_password(admin_pass, admin.password_hash):
+            admin.password_hash = hash_password(admin_pass)
+            admin.failed_login_attempts = 0
+            admin.locked_until = None
+            logger.info("Admin password hash sincronizado con SEED_ADMIN_PASSWORD")
+        else:
+            logger.info("Admin ya existe — password OK")
     else:
         if not (admin_email and admin_pass):
             logger.warning("No se creó admin: faltan SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD (solo dev)")
