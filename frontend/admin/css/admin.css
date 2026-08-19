@@ -9,17 +9,17 @@
   --gold-dark: #1a1a1a;
   --gold-light: #e0e0e0;
   --gold-glow: rgba(0, 0, 0, 0.06);
-  --bg: #ffffff;
-  --bg2: #ffffff;
-  --bg3: #f7f7f7;
-  --gray: #555555;
-  --gray-light: #f7f7f7;
-  --gray-mid: #e5e5e5;
-  --text: #000000;
-  --text2: #555555;
-  --text3: #999999;
-  --border: #e5e5e5;
-  --border-light: #f0f0f0;
+  --bg: #F5F0E7;
+  --bg2: #FAF6ED;
+  --bg3: #EDE6DA;
+  --gray: #57534E;
+  --gray-light: #EDE6DA;
+  --gray-mid: #E7E0D6;
+  --text: #1C1917;
+  --text2: #57534E;
+  --text3: #A8A29E;
+  --border: #E7E0D6;
+  --border-light: #EDE6DA;
   --danger: #c41e1e;
   --success: #1a7a3a;
   --warning: #b8860b;
@@ -174,7 +174,7 @@ button, a, input, select, textarea { touch-action: manipulation; }
 }
 .login-box .form-group input:focus {
   border-color: var(--gold);
-  background: #fff;
+  background: var(--bg2);
   box-shadow: 0 0 0 3px var(--gold-glow);
 }
 .login-box .form-group small {
@@ -623,7 +623,7 @@ tbody tr:hover td { background: rgba(0, 0, 0, 0.02); }
 .form-group textarea:focus,
 .form-group select:focus {
   border-color: var(--gold);
-  background: #fff;
+  background: var(--bg2);
   box-shadow: 0 0 0 3px var(--gold-glow);
 }
 .form-group textarea { resize: vertical; min-height: 74px; }
@@ -670,7 +670,7 @@ tbody tr:hover td { background: rgba(0, 0, 0, 0.02); }
 }
 .modal-overlay.open { display: flex; }
 .modal {
-  background: #fff;
+  background: var(--bg2);
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
@@ -759,7 +759,7 @@ tbody tr:hover td { background: rgba(0, 0, 0, 0.02); }
   display: grid;
   grid-template-columns: 320px 1fr;
   gap: 0;
-  background: #fff;
+  background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   min-height: 520px;
@@ -770,7 +770,7 @@ tbody tr:hover td { background: rgba(0, 0, 0, 0.02); }
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--bg2);
 }
 .admin-chat-list-title {
   padding: 16px 18px;
@@ -816,7 +816,7 @@ tbody tr:hover td { background: rgba(0, 0, 0, 0.02); }
 }
 #admin-chat-header {
   padding: 14px 20px;
-  background: #fff;
+  background: var(--bg2);
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
@@ -835,7 +835,7 @@ tbody tr:hover td { background: rgba(0, 0, 0, 0.02); }
   display: flex;
   padding: 12px 16px;
   border-top: 1px solid var(--border);
-  background: #fff;
+  background: var(--bg2);
   gap: 8px;
 }
 #admin-chat-input {
@@ -852,7 +852,7 @@ tbody tr:hover td { background: rgba(0, 0, 0, 0.02); }
 #admin-chat-input:focus {
   border-color: var(--gold);
   box-shadow: 0 0 0 3px var(--gold-glow);
-  background: #fff;
+  background: var(--bg2);
 }
 .admin-chat-conv { transition: background 0.2s var(--ease); }
 .admin-chat-conv:hover { background: rgba(0, 0, 0, 0.03) !important; }
@@ -906,7 +906,7 @@ tbody tr:hover td { background: rgba(0, 0, 0, 0.02); }
 /* ===== SIDEBAR TOGGLE ===== */
 .sidebar-toggle {
   display: none;
-  background: #fff;
+  background: var(--bg2);
   border: 1px solid var(--border);
   color: var(--text);
   width: 40px;
