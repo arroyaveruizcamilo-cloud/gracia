@@ -62,6 +62,7 @@ const api = {
     return this.request('GET', `/products${qs ? '?' + qs : ''}`);
   },
   getProduct(id) { return this.request('GET', `/products/${id}`); },
+  getProductCategories() { return this.request('GET', '/products/categories'); },
   createProduct(d, t) { return this.request('POST', '/products', d, t); },
   updateProduct(id, d, t) { return this.request('PUT', `/products/${id}`, d, t); },
   deleteProduct(id, t) { return this.request('DELETE', `/products/${id}`, null, t); },

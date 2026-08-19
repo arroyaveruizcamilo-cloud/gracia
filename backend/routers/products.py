@@ -65,6 +65,17 @@ def list_products(
     return [product_to_dict(p) for p in products]
 
 
+@router.get("/categories")
+def list_categories(db: Session = Depends(get_db)):
+    cats = (
+        db.query(Product.category)
+        .filter(Product.status == "active", Product.category.isnot(None))
+        .distinct()
+        .all()
+    )
+    return [c[0] for c in cats if c[0]]
+
+
 @router.get("/{product_id}")
 def get_product(product_id: int, db: Session = Depends(get_db)):
     p = db.query(Product).filter(Product.id == product_id).first()

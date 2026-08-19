@@ -405,6 +405,21 @@ async function submitReview(productId) {
 }
 
 // ===== PRODUCTS =====
+async function loadCategories() {
+  try {
+    const cats = await api.getProductCategories();
+    const pills = $('.category-pills');
+    if (!pills || !cats.length) return;
+    pills.innerHTML = `<button class="pill active" data-cat="">Todas</button>` +
+      cats.map(c => `<button class="pill" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+    pills.querySelectorAll('.pill').forEach(p => p.addEventListener('click', () => {
+      state.category = p.dataset.cat;
+      pills.querySelectorAll('.pill').forEach(x => x.classList.toggle('active', x.dataset.cat === state.category));
+      loadProducts();
+    }));
+  } catch (e) { /* keep hardcoded pills as fallback */ }
+}
+
 async function loadProducts() {
   showSkeleton(4);
   try {
@@ -1935,8 +1950,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Load initial products
-  loadProducts();
+  // Load categories dynamically, then initial products
+  loadCategories().then(() => loadProducts());
 
   // ===== HERO PARTICLE SYSTEM =====
   let particles = [];

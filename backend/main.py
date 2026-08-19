@@ -16,7 +16,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, PlainTextResponse, HTMLResponse
 from database import engine, Base, SessionLocal
-from models import User, UserRole, Product, ProductVariant, FAQ, Coupon
+from models import User, UserRole, Product
 from auth import hash_password, verify_password
 from middleware.error_handler import global_error_handler
 import json
@@ -305,25 +305,27 @@ async def lifespan(app: FastAPI):
             )
             db.add(admin)
 
-    # Second admin — Camilo Arroyave
-    second_admin_email = "arroyaveruizcamilo@gmail.com"
-    second_admin = db.query(User).filter(User.email == second_admin_email).first()
-    if not second_admin:
-        second_admin = User(
-            name="Camilo Arroyave",
-            email=second_admin_email,
-            password_hash=hash_password("camilo2006_RZ"),
-            role="admin",
-            email_verified=True,
-        )
-        db.add(second_admin)
-        logger.info(f"Segundo admin creado: {second_admin_email}")
-    else:
-        if not verify_password("camilo2006_RZ", second_admin.password_hash):
-            second_admin.password_hash = hash_password("camilo2006_RZ")
-            second_admin.failed_login_attempts = 0
-            second_admin.locked_until = None
-            logger.info(f"Password del segundo admin sincronizado: {second_admin_email}")
+    # Second admin (configurable via env vars)
+    second_admin_email = os.getenv("SECOND_ADMIN_EMAIL", "")
+    second_admin_pass = os.getenv("SECOND_ADMIN_PASSWORD", "")
+    if second_admin_email and second_admin_pass:
+        second_admin = db.query(User).filter(User.email == second_admin_email).first()
+        if not second_admin:
+            second_admin = User(
+                name="Admin Secundario",
+                email=second_admin_email,
+                password_hash=hash_password(second_admin_pass),
+                role="admin",
+                email_verified=True,
+            )
+            db.add(second_admin)
+            logger.info(f"Segundo admin creado: {second_admin_email}")
+        else:
+            if not verify_password(second_admin_pass, second_admin.password_hash):
+                second_admin.password_hash = hash_password(second_admin_pass)
+                second_admin.failed_login_attempts = 0
+                second_admin.locked_until = None
+                logger.info(f"Password del segundo admin sincronizado: {second_admin_email}")
 
     if ENVIRONMENT == "production":
         if not (os.getenv("SMTP_USER", "") and os.getenv("SMTP_PASS", "")):
@@ -336,15 +338,6 @@ async def lifespan(app: FastAPI):
         logger.info(f"SMTP habilitado para envíos de email ({smtp_host})")
 
     db.commit()
-
-    seed_products(db)
-    seed_faqs(db)
-
-    if not db.query(Coupon).first():
-        db.add(Coupon(code="GRACIA10", discount_type="percentage", discount_value=10, min_purchase=50, usage_limit=100, is_active=True))
-        db.add(Coupon(code="BIENVENIDA", discount_type="percentage", discount_value=15, min_purchase=30, usage_limit=200, is_active=True))
-        db.commit()
-
     db.close()
     yield
 
@@ -377,57 +370,6 @@ def _migrate_runtime():
 
 
 fastapi_app.router.lifespan_context = lifespan
-
-
-def seed_products(db):
-    if db.query(Product).count() > 0:
-        return
-    items = [
-        {"name": "Vestido Floral Primavera", "name_en": "Spring Floral Dress", "description": "Vestido largo con estampado floral, ideal para ocasiones especiales.", "description_en": "Long dress with floral print, ideal for special occasions.", "price": 149.99, "old_price": 199.99, "category": "Vestidos", "category_en": "Dresses", "stock": 25, "image": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=500", "featured": True, "badge": "Nuevo"},
-        {"name": "Blusa Seda Elegante", "name_en": "Elegant Silk Blouse", "description": "Blusa de seda natural con corte moderno.", "description_en": "Natural silk blouse with modern cut.", "price": 89.99, "old_price": None, "category": "Blusas", "category_en": "Blouses", "stock": 30, "image": "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500", "featured": True},
-        {"name": "Corset Cuero Premium", "name_en": "Premium Leather Corset", "description": "Corset de cuero genuino con cierre trasero.", "description_en": "Genuine leather corset with back closure.", "price": 129.99, "old_price": 169.99, "category": "Corsets", "category_en": "Corsets", "stock": 15, "image": "https://images.unsplash.com/photo-1591382386627-349b69288d2c?w=500", "featured": False, "badge": "Exclusivo"},
-        {"name": "Pantalón Palazzo", "name_en": "Palazzo Pants", "description": "Pantalón ancho tipo palazzo, fresco y elegante.", "description_en": "Wide palazzo style pants, fresh and elegant.", "price": 79.99, "old_price": None, "category": "Pantalones", "category_en": "Pants", "stock": 40, "image": "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=500", "featured": True},
-        {"name": "Body Encaje Negro", "name_en": "Black Lace Bodysuit", "description": "Body de encaje negro con transparencias.", "description_en": "Black lace bodysuit with sheer details.", "price": 59.99, "old_price": 79.99, "category": "Bodies", "category_en": "Bodysuits", "stock": 20, "image": "https://images.unsplash.com/photo-1608236415058-d4e35e73e9f7?w=500", "featured": False},
-        {"name": "Falda Plisada", "name_en": "Pleated Skirt", "description": "Falda plisada hasta la rodilla, color nude.", "description_en": "Knee-length pleated skirt, nude color.", "price": 69.99, "old_price": None, "category": "Faldas", "category_en": "Skirts", "stock": 35, "image": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=500", "featured": False},
-        {"name": "Buzo Oversize", "name_en": "Oversize Sweatshirt", "description": "Buzo algodón oversize con capucha.", "description_en": "Oversize cotton hoodie.", "price": 64.99, "old_price": 84.99, "category": "Buzos", "category_en": "Sweatshirts", "stock": 50, "image": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500", "featured": False},
-        {"name": "Vestido Noche Glamour", "name_en": "Glamour Evening Dress", "description": "Vestido de noche con lentejuelas.", "description_en": "Evening dress with sequins.", "price": 249.99, "old_price": 329.99, "category": "Vestidos", "category_en": "Dresses", "stock": 10, "image": "https://images.unsplash.com/photo-1566174053879-31528523f8ae?w=500", "featured": True, "badge": "Ed. Limitada"},
-        {"name": "Blusa Crop Top", "name_en": "Crop Top Blouse", "description": "Blusa corta con mangas abullonadas.", "description_en": "Cropped blouse with puff sleeves.", "price": 49.99, "old_price": None, "category": "Blusas", "category_en": "Blouses", "stock": 45, "image": "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500", "featured": False},
-        {"name": "Corset Floral", "name_en": "Floral Corset", "description": "Corset con bordados florales.", "description_en": "Corset with floral embroidery.", "price": 109.99, "old_price": 139.99, "category": "Corsets", "category_en": "Corsets", "stock": 12, "image": "https://images.unsplash.com/photo-1591228127791-8e2eaef5e3e1?w=500", "featured": False},
-        {"name": "Pantalón Jeans Recto", "name_en": "Straight Jeans", "description": "Jeans recto clásico tiro alto.", "description_en": "Classic high-waist straight jeans.", "price": 69.99, "old_price": None, "category": "Pantalones", "category_en": "Pants", "stock": 60, "image": "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500", "featured": False},
-        {"name": "Body Deportivo", "name_en": "Sport Bodysuit", "description": "Body transpirable para entrenar.", "description_en": "Breathable workout bodysuit.", "price": 44.99, "old_price": 59.99, "category": "Bodies", "category_en": "Bodysuits", "stock": 55, "image": "https://images.unsplash.com/photo-1518314911000-93e5ef2d26d0?w=500", "featured": False},
-        {"name": "Falda Larga Boho", "name_en": "Boho Long Skirt", "description": "Falda larga estilo boho con vuelo.", "description_en": "Long boho style skirt with flare.", "price": 74.99, "old_price": None, "category": "Faldas", "category_en": "Skirts", "stock": 28, "image": "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=500", "featured": False},
-        {"name": "Buzo Cropped", "name_en": "Cropped Sweatshirt", "description": "Buzo corto con cremallera.", "description_en": "Cropped zip-up hoodie.", "price": 54.99, "old_price": 69.99, "category": "Buzos", "category_en": "Sweatshirts", "stock": 32, "image": "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500", "featured": False},
-    ]
-    for it in items:
-        slug = it["name"].lower().replace(" ", "-")
-        it["slug"] = slug
-        p = Product(**it)
-        db.add(p)
-        db.flush()
-
-        sizes = ["XS", "S", "M", "L", "XL"]
-        for size in sizes[:3]:
-            db.add(ProductVariant(product_id=p.id, size=size, color="Negro",
-                                  color_hex="#000000", stock=5))
-            db.add(ProductVariant(product_id=p.id, size=size, color="Blanco",
-                                  color_hex="#FFFFFF", stock=5))
-
-    db.commit()
-
-
-def seed_faqs(db):
-    if db.query(FAQ).count() > 0:
-        return
-    faqs_data = [
-        {"question": "¿Cuánto tiempo tarda el envío?", "answer": "Los envíos tardan entre 3-7 días hábiles dependiendo de tu ubicación.", "category": "envíos"},
-        {"question": "¿Aceptan devoluciones?", "answer": "Sí, aceptamos devoluciones dentro de los primeros 15 días. El producto debe estar en su estado original con etiquetas.", "category": "devoluciones"},
-        {"question": "¿Cómo sé mi talla?", "answer": "Puedes consultar nuestra guía de tallas en la página de cada producto. Si tienes dudas, contáctanos por WhatsApp.", "category": "productos"},
-        {"question": "¿Qué métodos de pago aceptan?", "answer": "Aceptamos Tarjeta Débito/Crédito (Visa, Mastercard, Amex), PSE (Bancolombia, Davivienda, Caja Social), Nequi, Daviplata, Llave Davivienda y SisteCrédito. Todos los pagos son procesados de forma segura por Wompi (Bancolombia).", "category": "pagos"},
-        {"question": "¿Hacen envíos internacionales?", "answer": "Por el momento solo realizamos envíos dentro del país. Pronto expandiremos.", "category": "envíos"},
-    ]
-    for f in faqs_data:
-        db.add(FAQ(**f))
-    db.commit()
 
 
 @fastapi_app.get("/health")

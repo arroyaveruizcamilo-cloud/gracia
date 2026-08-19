@@ -1,3 +1,4 @@
+import os
 import random
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
@@ -88,35 +89,40 @@ def seed_database():
 
     categories = {c.name: c.id for c in db.query(Category).all()}
 
-    admin_email = "Vanessaarroyave1190@gmail.com"
-    admin = db.query(User).filter(User.email == admin_email).first()
-    if not admin:
-        admin = User(
-            name="Administrador",
-            email=admin_email,
-            password_hash=hash_password("Camifeli2020"),
-            role="admin",
-            email_verified=True,
-            phone="+57 300 123 4567",
-        )
-        db.add(admin)
-        db.flush()
-        print("✓ Admin creado")
+    admin_email = os.getenv("SEED_ADMIN_EMAIL", "")
+    admin_pass = os.getenv("SEED_ADMIN_PASSWORD", "")
+    if admin_email and admin_pass:
+        admin = db.query(User).filter(User.email == admin_email).first()
+        if not admin:
+            admin = User(
+                name="Administrador",
+                email=admin_email,
+                password_hash=hash_password(admin_pass),
+                role="admin",
+                email_verified=True,
+            )
+            db.add(admin)
+            db.flush()
+            print("✓ Admin creado")
+    else:
+        print("⚠ No se creó admin: faltan SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD")
 
-    # Second admin — Camilo Arroyave
-    second_admin_email = "arroyaveruizcamilo@gmail.com"
-    second_admin = db.query(User).filter(User.email == second_admin_email).first()
-    if not second_admin:
-        second_admin = User(
-            name="Camilo Arroyave",
-            email=second_admin_email,
-            password_hash=hash_password("camilo2006_RZ"),
-            role="admin",
-            email_verified=True,
-        )
-        db.add(second_admin)
-        db.flush()
-        print("✓ Segundo admin creado")
+    # Second admin (configurable via env vars)
+    second_admin_email = os.getenv("SECOND_ADMIN_EMAIL", "")
+    second_admin_pass = os.getenv("SECOND_ADMIN_PASSWORD", "")
+    if second_admin_email and second_admin_pass:
+        second_admin = db.query(User).filter(User.email == second_admin_email).first()
+        if not second_admin:
+            second_admin = User(
+                name="Admin Secundario",
+                email=second_admin_email,
+                password_hash=hash_password(second_admin_pass),
+                role="admin",
+                email_verified=True,
+            )
+            db.add(second_admin)
+            db.flush()
+            print("✓ Segundo admin creado")
 
     demo_user = db.query(User).filter(User.email == "demo@gracia.moda").first()
     if not demo_user:
@@ -126,7 +132,6 @@ def seed_database():
             password_hash=hash_password("Demo123!"),
             role="client",
             email_verified=True,
-            phone="+57 300 987 6543",
         )
         db.add(demo_user)
         db.flush()

@@ -25,13 +25,69 @@ services:
         fromDatabase:
           name: gracia-db
           property: connectionString
+
+      # ─── CORS / Hosts ───────────────────────────────
       - key: CORS_ORIGINS
         sync: false
       - key: ALLOWED_HOSTS
         sync: false
       - key: FRONTEND_URL
         sync: false
+
+      # ─── Admin seed ─────────────────────────────────
       - key: SEED_ADMIN_EMAIL
         sync: false
       - key: SEED_ADMIN_PASSWORD
+        sync: false
+
+      # ─── Almacenamiento de imágenes ──────────────────
+      - key: STORAGE_BACKEND
+        value: cloudinary
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      # ─── Monitoreo de errores ────────────────────────
+      - key: SENTRY_DSN
+        sync: false
+
+      # ─── SMTP (emails) ──────────────────────────────
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+
+      # ─── MercadoPago ────────────────────────────────
+      - key: MP_ACCESS_TOKEN
+        sync: false
+
+      # ─── Wompi ──────────────────────────────────────
+      - key: WOMPI_PUBLIC_KEY
+        sync: false
+      - key: WOMPI_PRIVATE_KEY
+        sync: false
+      - key: WOMPI_INTEGRITY_SECRET
+        sync: false
+      - key: WOMPI_EVENTS_SECRET
+        sync: false
+
+      # ─── Analytics ──────────────────────────────────
+      - key: GA_MEASUREMENT_ID
+        sync: false
+      - key: META_PIXEL_ID
+        sync: false
+
+      # ─── reCAPTCHA ──────────────────────────────────
+      - key: RECAPTCHA_SITE_KEY
+        sync: false
+      - key: RECAPTCHA_SECRET_KEY
         sync: false

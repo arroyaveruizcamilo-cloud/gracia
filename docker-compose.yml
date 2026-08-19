@@ -11,13 +11,33 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   backend:
-    build: ./backend
+    build: .
     ports:
       - "5000:5000"
     environment:
       DATABASE_URL: postgresql://postgres:postgres@db:5432/gracia_clothing
-      SECRET_KEY: ${JWT_SECRET:?Debes configurar JWT_SECRET en tu .env}
+      JWT_SECRET: ${JWT_SECRET:?Debes configurar JWT_SECRET en tu .env}
       ENVIRONMENT: production
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:5000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
+      # Storage
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      # Sentry
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      # SMTP
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      FROM_EMAIL: ${FROM_EMAIL:-}
+      # Admin
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
     depends_on:
       - db
 
