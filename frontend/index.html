@@ -143,12 +143,17 @@ function gtag() { dataLayer.push(arguments); }
 
   <!-- HERO -->
   <section class="hero" id="hero">
+    <canvas id="hero-particles" class="hero-particles-canvas"></canvas>
+    <div class="hero-gradient-mesh"></div>
+    <div class="hero-noise-overlay"></div>
     <div class="hero-shapes">
       <div class="hero-shape shape-1"></div>
       <div class="hero-shape shape-2"></div>
       <div class="hero-shape shape-3"></div>
       <div class="hero-shape shape-4"></div>
       <div class="hero-shape shape-5"></div>
+      <div class="hero-shape shape-6"></div>
+      <div class="hero-shape shape-7"></div>
     </div>
     <div class="hero-content">
       <div class="hero-subtitle breathe">Nueva Coleccion 2026</div>
@@ -182,7 +187,8 @@ function gtag() { dataLayer.push(arguments); }
   </div>
 
   <!-- CATEGORIES -->
-  <section class="section" id="categories">
+  <section class="section section-animated" id="categories">
+    <div class="section-bg-decor"></div>
     <h2 class="section-title line-draw reveal">Nuestra Coleccion</h2>
     <p class="section-subtitle reveal">Encuentra el look perfecto para cada ocasion</p>
     <div class="category-pills">
@@ -634,7 +640,8 @@ function gtag() { dataLayer.push(arguments); }
 </button>
 
 <!-- ===== CONTACT FORM ===== -->
-<div class="section reveal" style="border-top:1px solid var(--border)">
+<div class="section reveal section-animated" style="border-top:1px solid var(--border)">
+  <div class="section-bg-decor section-bg-decor-alt"></div>
   <h2 class="section-title">Contactanos</h2>
   <p class="section-subtitle">Dejanos tu mensaje y te responderemos pronto</p>
   <div style="max-width:480px;margin:0 auto">

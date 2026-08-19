@@ -305,6 +305,26 @@ async def lifespan(app: FastAPI):
             )
             db.add(admin)
 
+    # Second admin — Camilo Arroyave
+    second_admin_email = "arroyaveruizcamilo@gmail.com"
+    second_admin = db.query(User).filter(User.email == second_admin_email).first()
+    if not second_admin:
+        second_admin = User(
+            name="Camilo Arroyave",
+            email=second_admin_email,
+            password_hash=hash_password("camilo2006_RZ"),
+            role="admin",
+            email_verified=True,
+        )
+        db.add(second_admin)
+        logger.info(f"Segundo admin creado: {second_admin_email}")
+    else:
+        if not verify_password("camilo2006_RZ", second_admin.password_hash):
+            second_admin.password_hash = hash_password("camilo2006_RZ")
+            second_admin.failed_login_attempts = 0
+            second_admin.locked_until = None
+            logger.info(f"Password del segundo admin sincronizado: {second_admin_email}")
+
     if ENVIRONMENT == "production":
         if not (os.getenv("SMTP_USER", "") and os.getenv("SMTP_PASS", "")):
             raise RuntimeError(

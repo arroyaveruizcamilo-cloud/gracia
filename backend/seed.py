@@ -103,6 +103,21 @@ def seed_database():
         db.flush()
         print("✓ Admin creado")
 
+    # Second admin — Camilo Arroyave
+    second_admin_email = "arroyaveruizcamilo@gmail.com"
+    second_admin = db.query(User).filter(User.email == second_admin_email).first()
+    if not second_admin:
+        second_admin = User(
+            name="Camilo Arroyave",
+            email=second_admin_email,
+            password_hash=hash_password("camilo2006_RZ"),
+            role="admin",
+            email_verified=True,
+        )
+        db.add(second_admin)
+        db.flush()
+        print("✓ Segundo admin creado")
+
     demo_user = db.query(User).filter(User.email == "demo@gracia.moda").first()
     if not demo_user:
         demo_user = User(

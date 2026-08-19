@@ -1938,5 +1938,136 @@ document.addEventListener('DOMContentLoaded', () => {
   // Load initial products
   loadProducts();
 
+  // ===== HERO PARTICLE SYSTEM =====
+  let particles = [];
+  let heroAnimFrameId = null;
+  const heroCanvas = document.getElementById('hero-particles');
+  if (heroCanvas && !prefersReducedMotion) {
+    const ctx = heroCanvas.getContext('2d');
+
+    function getIsDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
+
+    function resizeCanvas() {
+      const hero = document.getElementById('hero');
+      if (!hero) return;
+      heroCanvas.width = hero.offsetWidth;
+      heroCanvas.height = hero.offsetHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.x = Math.random() * heroCanvas.width;
+        this.y = Math.random() * heroCanvas.height;
+        this.size = Math.random() * 2 + 0.5;
+        this.speedX = (Math.random() - 0.5) * 0.4;
+        this.speedY = (Math.random() - 0.5) * 0.4;
+        this.opacity = Math.random() * 0.3 + 0.05;
+        this.fadeSpeed = Math.random() * 0.003 + 0.001;
+        this.growing = Math.random() > 0.5;
+      }
+      update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if (this.growing) { this.opacity += this.fadeSpeed; if (this.opacity >= 0.35) this.growing = false; }
+        else { this.opacity -= this.fadeSpeed; if (this.opacity <= 0.03) this.growing = true; }
+        if (this.x < -10 || this.x > heroCanvas.width + 10 || this.y < -10 || this.y > heroCanvas.height + 10) this.reset();
+      }
+      draw() {
+        const dpr = window.devicePixelRatio || 1;
+        ctx.beginPath();
+        ctx.arc(this.x * dpr, this.y * dpr, this.size * dpr, 0, Math.PI * 2);
+        ctx.fillStyle = getIsDark() ? `rgba(255,255,255,${this.opacity})` : `rgba(0,0,0,${this.opacity})`;
+        ctx.fill();
+      }
+    }
+
+    function initParticles() {
+      const count = isMobile ? 20 : 50;
+      particles = Array.from({ length: count }, () => new Particle());
+    }
+
+    function drawConnections() {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            const opacity = (1 - dist / 120) * 0.08;
+            ctx.beginPath();
+            const dpr = window.devicePixelRatio || 1;
+            ctx.moveTo(particles[i].x * dpr, particles[i].y * dpr);
+            ctx.lineTo(particles[j].x * dpr, particles[j].y * dpr);
+            ctx.strokeStyle = getIsDark() ? `rgba(255,255,255,${opacity})` : `rgba(0,0,0,${opacity})`;
+            ctx.lineWidth = 0.5 * dpr;
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    function animateParticles() {
+      const dpr = window.devicePixelRatio || 1;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, heroCanvas.width, heroCanvas.height);
+      particles.forEach(p => { p.update(); p.draw(); });
+      drawConnections();
+      heroAnimFrameId = requestAnimationFrame(animateParticles);
+    }
+
+    initParticles();
+    animateParticles();
+
+    // Pause when hero not visible
+    const heroObs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          if (!heroAnimFrameId) animateParticles();
+        } else {
+          cancelAnimationFrame(heroAnimFrameId);
+          heroAnimFrameId = null;
+        }
+      });
+    }, { threshold: 0 });
+    heroObs.observe(document.getElementById('hero'));
+  }
+
+  // ===== ENHANCED SCROLL REVEAL WITH STAGGER =====
+  const enhancedRevealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const children = entry.target.querySelectorAll('.product-card, .wishlist-item, .order-history-item');
+        children.forEach((child, i) => {
+          child.style.transitionDelay = `${i * 0.06}s`;
+          child.classList.add('visible');
+        });
+        enhancedRevealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -60px 0px' });
+  document.querySelectorAll('.product-grid, .wishlist-grid').forEach(grid => {
+    enhancedRevealObserver.observe(grid);
+  });
+
+  // ===== SMOOTH SECTION PARALLAX ON SCROLL =====
+  if (!isMobile && !prefersReducedMotion) {
+    const sectionDecors = document.querySelectorAll('.section-bg-decor');
+    window.addEventListener('scroll', () => {
+      sectionDecors.forEach(decor => {
+        const rect = decor.parentElement.getBoundingClientRect();
+        const scrolled = (window.innerHeight - rect.top) / (window.innerHeight + rect.height);
+        decor.style.transform = `translateY(${(scrolled - 0.5) * 40}px) scale(${0.9 + scrolled * 0.2})`;
+      });
+    }, { passive: true });
+  }
+
+  // ===== THEME CHANGE PARTICLE COLOR =====
+  const themeToggleObs = new MutationObserver(() => {
+    particles.forEach(p => { p.reset(); });
+  });
+  themeToggleObs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
 });
